@@ -1189,8 +1189,8 @@ class GameScreen{
       if(isBlackTurn){ctx.fillStyle='#1a1a1a';ctx.fillRect(0,turnY,W,6);ctx.fillStyle=C.tA;ctx.fillRect(0,turnY-1,W,1.5);ctx.fillRect(0,turnY+6,W,1.5);}
       else{ctx.fillStyle='#e8e7e0';ctx.fillRect(0,turnY,W,6);ctx.fillStyle=C.tB;ctx.fillRect(0,turnY-1,W,1.5);ctx.fillRect(0,turnY+6,W,1.5);}
       // Row 4-6: パネル上段 + 盤面 + パネル下段
-      topH=turnY+8;const panelRowH=fs*2.8;
-      const boardTop=topH+panelRowH+fs*0.3;const boardBot=H-panelRowH-fs*2;
+      topH=turnY+8;const panelRowH=fs*2.8;const bubbleRowH=fs*2;
+      const boardTop=topH+bubbleRowH+panelRowH+fs*0.3;const boardBot=H-panelRowH-bubbleRowH-fs*1;this._bubbleTopY=topH;this._bubbleBotY=boardBot+panelRowH+fs*0.3;
       const bPx=Math.min(eW,boardBot-boardTop);
       this.cs=bPx/BS;this.ox=(W-bPx)/2;this.oy=boardTop;
       const pnl=this._calcPlayerPos(W,H,fs);ppW=pnl.pw;ppH=pnl.ph;
@@ -1309,7 +1309,7 @@ class GameScreen{
         const isTop2=pp2.y<this.oy+this.cs*BS/2;
         const isYou2=humanCount===1&&!curP.isCPU;
         // 「あなた」ラベルと被らないようにずらす
-        const msgY2=isTop2?pp2.y+ppH+fs*0.5:pp2.y-(isYou2?fs*1.1:fs*0.6);
+        const msgY2=mob?(isTop2?this._bubbleTopY+fs*0.7:this._bubbleBotY+fs*0.7):(isTop2?pp2.y+ppH+fs*0.5:pp2.y-(isYou2?fs*1.1:fs*0.6));
         const msgX2=Math.min(Math.max(pp2.x+ppW/2,fs*3),W-fs*3);tt(ctx,this.tm.msg,msgX2,msgY2,`bold ${fs*0.55}px sans-serif`,C.gold);
       }
     }
@@ -1600,7 +1600,7 @@ class GameScreen{
     const isTop=pos.y<this.oy+bSz/2;
     // パネル基準: 上段→パネルの上、下段→パネルの下
     const px=Math.max(4,Math.min(pos.x+(ppW2-pw)/2,W-pw-4));
-    const py=isTop?pos.y-ph2-fs*0.2:pos.y+ppH2+fs*0.2;
+    const py=this._bubbleTopY!=null&&(W<500)?( isTop?this._bubbleTopY+fs*0.3:this._bubbleBotY+fs*0.2 ):( isTop?pos.y-ph2-fs*0.2:pos.y+ppH2+fs*0.2 );
     const p=this.tm.ps[bb.corner%4];
     const swap=this.tm.swap;
     const isBlack=p?(p.team==='A'?(swap?false:true):(swap?true:false)):true;
