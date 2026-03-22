@@ -1419,15 +1419,13 @@ class GameScreen{
             if(grid.has(nk)&&!visited.has(nk)){visited.add(nk);q.push([r+dr,c+dc]);}}}
         groups.push(group);
       }
-      // クリップ: グリッド座標ベースでセル全体サイズの穴を開ける
+      // クリップ: 隣接セル間はpadなし（evenodd重なり防止）
       ctx.beginPath();ctx.rect(0,0,W,H);
       for(const key of grid){
         const[r,c]=key.split(',').map(Number);
-        const sx=this.ox+c*cs2-pad,sy=this.oy+r*cs2-pad,sz=cs2+pad*2,rd=8;
-        ctx.moveTo(sx+rd,sy);ctx.lineTo(sx+sz-rd,sy);ctx.quadraticCurveTo(sx+sz,sy,sx+sz,sy+rd);
-        ctx.lineTo(sx+sz,sy+sz-rd);ctx.quadraticCurveTo(sx+sz,sy+sz,sx+sz-rd,sy+sz);
-        ctx.lineTo(sx+rd,sy+sz);ctx.quadraticCurveTo(sx,sy+sz,sx,sy+sz-rd);
-        ctx.lineTo(sx,sy+rd);ctx.quadraticCurveTo(sx,sy,sx+rd,sy);
+        const pT=grid.has(`${r-1},${c}`)?0:pad, pB=grid.has(`${r+1},${c}`)?0:pad;
+        const pL=grid.has(`${r},${c-1}`)?0:pad, pR=grid.has(`${r},${c+1}`)?0:pad;
+        ctx.rect(this.ox+c*cs2-pL, this.oy+r*cs2-pT, cs2+pL+pR, cs2+pT+pB);
       }
       ctx.fillStyle='rgba(0,0,0,1)';ctx.fill('evenodd');
       // グロー枠（グループの外周辺のみ描画→隣接セル間の辺は省略）
