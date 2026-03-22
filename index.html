@@ -1108,21 +1108,19 @@ class GameScreen{
 
   // プレイヤーの4隅位置を計算
   _calcPlayerPos(W,H,fs){
-    const bSz=this.cs*BS;
-    const mob=W<500;
-    const pad=fs*(mob?0.5:0.7);
-    // パネル: アイコン(上) + 名前(下)（モバイルでは縮小）
-    const pw=fs*(mob?2.6:3.2),ph=fs*(mob?2.6:3);
-    // 盤面の4隅外側に配置
-    const bx1=this.ox-pw-pad, bx2=this.ox+bSz+pad;
-    const by1=this.oy-fs*0.5, by2=this.oy+bSz-ph+fs*0.5;
-    this.pPos=[
-      {x:bx1, y:by1},     // P0: 左上
-      {x:bx1, y:by2},     // P1: 左下
-      {x:bx2, y:by1},     // P2: 右上
-      {x:bx2, y:by2},     // P3: 右下
-    ];
-    return{pw,ph};
+    const bSz=this.cs*BS;const mob=W<500;
+    if(mob){
+      const pw=fs*2.6,ph=fs*2.6;
+      const topY=this.oy-ph-fs*0.3,botY=this.oy+bSz+fs*0.3;
+      this.pPos=[{x:this.ox,y:topY},{x:this.ox,y:botY},{x:this.ox+bSz-pw,y:topY},{x:this.ox+bSz-pw,y:botY}];
+      return{pw,ph};
+    }else{
+      const pad=fs*0.7,pw=fs*3.2,ph=fs*3;
+      const bx1=this.ox-pw-pad,bx2=this.ox+bSz+pad;
+      const by1=this.oy-fs*0.5,by2=this.oy+bSz-ph+fs*0.5;
+      this.pPos=[{x:bx1,y:by1},{x:bx1,y:by2},{x:bx2,y:by1},{x:bx2,y:by2}];
+      return{pw,ph};
+    }
   }
 
   // プレイヤーパネル: アイコン→改行→名前（中央寄せ）
@@ -1165,43 +1163,55 @@ class GameScreen{
     ctx.fillStyle=battleBg(this.bd,this.tm.swap,isFinal);ctx.fillRect(0,0,W,H);this.btns=[];
     const{eW,ox:lox,cx,fs}=L(W,H);
     const mob=W<500;
-    const topH=fs*(mob?3.2:4.5); // モバイルではデッドスペース削減
-    const barH=fs*(mob?1.5:2); // モバイルではバー薄め
-    const barP=(topH-barH)/2;
-    const msgH=0;const bArea=H-topH;
-    // 盤面: 左右にプレイヤーパネルを確保（モバイルでは縮小）
-    const sidePanel=fs*(mob?2.8:3.5);
-    const bPx=Math.min(eW-sidePanel*2,bArea*0.85);
-    this.cs=bPx/BS;this.ox=(W-bPx)/2;this.oy=mob?topH+fs*1.5:topH+(bArea-bPx)/2;
     const cn=this.bd.cnt();const ph=this.tm.phase;
-    // 赤黒・白青ペアリング: 石色に紐づく（チームではなく）
     const iCol=this.tm.tCol===BLACK?C.tA:C.tB;
-    const{pw:ppW,ph:ppH}=this._calcPlayerPos(W,H,fs);
-
-    // スプラバー（モバイルでは石数表示スペースを確保）
-    const numPad=mob?barH*1.0:0;
-    this.ren.splatBar(lox+numPad,barP,eW-numPad*2,barH,this.bd,false,this.tm.swap);
-
-    // ホームボタン + 速度ボタン（バーの下）
-    const hmX=2,hmY=barP+barH+fs*0.1,hmW=fs*1.5,hmH=fs*0.9;
-    hovFx(ctx,hmX,hmY,hmW,hmH);
-    tt(ctx,'🏠',hmX+hmW/2,hmY+hmH/2,`${fs*(isHov(hmX,hmY,hmW,hmH)?0.7:0.6)}px sans-serif`,isHov(hmX,hmY,hmW,hmH)?'rgba(255,255,255,0.95)':'rgba(255,255,255,0.7)');
-    this.btns.push({id:'home',x:hmX,y:hmY,w:hmW,h:hmH});
-
-    const spdX=W-fs*2,spdY=hmY;const spW=fs*1.8,spH=hmH;
-    rr(ctx,spdX,spdY,spW,spH,5);ctx.fillStyle=C.pan;ctx.fill();hovFx(ctx,spdX,spdY,spW,spH);
-    const spdTxt=this.tm.spd>=8?'⚡':`×${this.tm.spd}`;
-    tt(ctx,spdTxt,spdX+spW/2,spdY+spH/2,`bold ${fs*0.5}px sans-serif`,isHov(spdX,spdY,spW,spH)?C.txt:C.gold);
-    this.btns.push({id:'spd',x:spdX,y:spdY,w:spW,h:spH});
-
-    // ターンインジケーター（赤黒/白青ペアリング）
     const isBlackTurn=this.tm.tCol===BLACK;
-    if(isBlackTurn){
-      ctx.fillStyle='#1a1a1a';ctx.fillRect(0,topH-6,W,6);
-      ctx.fillStyle=C.tA;ctx.fillRect(0,topH-7,W,1.5);ctx.fillRect(0,topH,W,1.5);
+    let topH,barH,ppW,ppH;
+
+    if(mob){
+      // === モバイル: 縦積みレイアウト ===
+      // Row 1: ホーム + 速度
+      const ctrlH=fs*1.2;
+      const hmX=4,hmY=4,hmW=fs*1.5,hmH=ctrlH;
+      hovFx(ctx,hmX,hmY,hmW,hmH);
+      tt(ctx,'🏠',hmX+hmW/2,hmY+hmH/2,`${fs*(isHov(hmX,hmY,hmW,hmH)?0.7:0.6)}px sans-serif`,isHov(hmX,hmY,hmW,hmH)?'rgba(255,255,255,0.95)':'rgba(255,255,255,0.7)');
+      this.btns.push({id:'home',x:hmX,y:hmY,w:hmW,h:hmH});
+      const spdX=W-fs*2-4,spdY=4;const spW=fs*1.8,spH=ctrlH;
+      rr(ctx,spdX,spdY,spW,spH,5);ctx.fillStyle=C.pan;ctx.fill();hovFx(ctx,spdX,spdY,spW,spH);
+      const spdTxt=this.tm.spd>=8?'⚡':`×${this.tm.spd}`;
+      tt(ctx,spdTxt,spdX+spW/2,spdY+spH/2,`bold ${fs*0.5}px sans-serif`,isHov(spdX,spdY,spW,spH)?C.txt:C.gold);
+      this.btns.push({id:'spd',x:spdX,y:spdY,w:spW,h:spH});
+      // Row 2: スプラバー
+      barH=fs*1.5;const barY=ctrlH+6;const numPad=barH*1.0;
+      this.ren.splatBar(lox+numPad,barY,eW-numPad*2,barH,this.bd,false,this.tm.swap);
+      // Row 3: ターンインジケーター
+      const turnY=barY+barH+2;
+      if(isBlackTurn){ctx.fillStyle='#1a1a1a';ctx.fillRect(0,turnY,W,6);ctx.fillStyle=C.tA;ctx.fillRect(0,turnY-1,W,1.5);ctx.fillRect(0,turnY+6,W,1.5);}
+      else{ctx.fillStyle='#e8e7e0';ctx.fillRect(0,turnY,W,6);ctx.fillStyle=C.tB;ctx.fillRect(0,turnY-1,W,1.5);ctx.fillRect(0,turnY+6,W,1.5);}
+      // Row 4-6: パネル上段 + 盤面 + パネル下段
+      topH=turnY+8;const panelRowH=fs*2.8;
+      const boardTop=topH+panelRowH+fs*0.3;const boardBot=H-panelRowH-fs*2;
+      const bPx=Math.min(eW,boardBot-boardTop);
+      this.cs=bPx/BS;this.ox=(W-bPx)/2;this.oy=boardTop;
+      const pnl=this._calcPlayerPos(W,H,fs);ppW=pnl.pw;ppH=pnl.ph;
     }else{
-      ctx.fillStyle='#e8e7e0';ctx.fillRect(0,topH-6,W,6);
-      ctx.fillStyle=C.tB;ctx.fillRect(0,topH-7,W,1.5);ctx.fillRect(0,topH,W,1.5);
+      // === デスクトップ: 従来の4隅レイアウト ===
+      topH=fs*4.5;barH=fs*2;const barP2=(topH-barH)/2;const bArea=H-topH;
+      const sidePanel=fs*3.5;const bPx=Math.min(eW-sidePanel*2,bArea*0.85);
+      this.cs=bPx/BS;this.ox=(W-bPx)/2;this.oy=topH+(bArea-bPx)/2;
+      const pnl=this._calcPlayerPos(W,H,fs);ppW=pnl.pw;ppH=pnl.ph;
+      this.ren.splatBar(lox,barP2,eW,barH,this.bd,false,this.tm.swap);
+      const hmX=2,hmY=barP2+barH+fs*0.1,hmW=fs*1.5,hmH=fs*0.9;
+      hovFx(ctx,hmX,hmY,hmW,hmH);
+      tt(ctx,'🏠',hmX+hmW/2,hmY+hmH/2,`${fs*(isHov(hmX,hmY,hmW,hmH)?0.7:0.6)}px sans-serif`,isHov(hmX,hmY,hmW,hmH)?'rgba(255,255,255,0.95)':'rgba(255,255,255,0.7)');
+      this.btns.push({id:'home',x:hmX,y:hmY,w:hmW,h:hmH});
+      const spdX=W-fs*2,spdY=hmY;const spW=fs*1.8,spH=hmH;
+      rr(ctx,spdX,spdY,spW,spH,5);ctx.fillStyle=C.pan;ctx.fill();hovFx(ctx,spdX,spdY,spW,spH);
+      const spdTxt=this.tm.spd>=8?'⚡':`×${this.tm.spd}`;
+      tt(ctx,spdTxt,spdX+spW/2,spdY+spH/2,`bold ${fs*0.5}px sans-serif`,isHov(spdX,spdY,spW,spH)?C.txt:C.gold);
+      this.btns.push({id:'spd',x:spdX,y:spdY,w:spW,h:spH});
+      if(isBlackTurn){ctx.fillStyle='#1a1a1a';ctx.fillRect(0,topH-6,W,6);ctx.fillStyle=C.tA;ctx.fillRect(0,topH-7,W,1.5);ctx.fillRect(0,topH,W,1.5);}
+      else{ctx.fillStyle='#e8e7e0';ctx.fillRect(0,topH-6,W,6);ctx.fillStyle=C.tB;ctx.fillRect(0,topH-7,W,1.5);ctx.fillRect(0,topH,W,1.5);}
     }
 
     // === 4隅プレイヤーパネル ===
@@ -1304,19 +1314,21 @@ class GameScreen{
       }
     }
     if(ph===PH.PC&&curP){
-      // OK/NGボタンをアクティブプレイヤーパネルの下に配置
-      const pi=ps.indexOf(curP);
-      const pp=this.pPos[pi];
-      if(pp){
-        const bw=Math.min(ppW*0.9,fs*2.8),bh=Math.max(fs*1.1,30);
-        const bx=pp.x+(ppW-bw)/2;
-        const by2=pp.y+ppH+fs*0.6;
-        tt(ctx,this.tm.msg,pp.x+ppW/2,by2,`bold ${fs*0.5}px sans-serif`,C.gold);
-        const btnY3=by2+fs*0.35;
+      if(mob){
+        const bw=Math.min(eW*0.4,180),bh=Math.max(fs*1.8,48);
+        const bSz2=this.cs*BS,by2=this.oy+bSz2+fs*3.5;
+        tt(ctx,this.tm.msg,cx,by2-fs*0.5,`bold ${fs*0.6}px sans-serif`,C.gold);
+        if(this.tm.sub)tt(ctx,this.tm.sub,cx,by2+fs*0.1,`${fs*0.5}px sans-serif`,C.gold);
+        const btnY3=by2+fs*0.6,gap3=fs*0.5;
+        drawBtn(ctx,'✓',cx-bw-gap3/2,btnY3,bw,bh,'#2d9e5f','#fff');this.btns.push({id:'ok',x:cx-bw-gap3/2,y:btnY3,w:bw,h:bh});
+        drawBtn(ctx,'✗',cx+gap3/2,btnY3,bw,bh,'#c04040','#fff');this.btns.push({id:'ng',x:cx+gap3/2,y:btnY3,w:bw,h:bh});
+      }else{
+        const pi=ps.indexOf(curP);const pp=this.pPos[pi];
+        if(pp){const bw=Math.min(ppW*0.9,fs*2.8),bh=Math.max(fs*1.1,30);const bx=pp.x+(ppW-bw)/2;const by2=pp.y+ppH+fs*0.6;
+        tt(ctx,this.tm.msg,pp.x+ppW/2,by2,`bold ${fs*0.5}px sans-serif`,C.gold);const btnY3=by2+fs*0.35;
         drawBtn(ctx,'✓',bx,btnY3,bw*0.45,bh,'#2d9e5f','#fff');this.btns.push({id:'ok',x:bx,y:btnY3,w:bw*0.45,h:bh});
         drawBtn(ctx,'✗',bx+bw*0.55,btnY3,bw*0.45,bh,'#c04040','#fff');this.btns.push({id:'ng',x:bx+bw*0.55,y:btnY3,w:bw*0.45,h:bh});
-        // 協力候補の警告
-        if(this.tm.sub)tt(ctx,this.tm.sub,pp.x+ppW/2,btnY3+bh+fs*0.3,`${fs*0.5}px sans-serif`,C.gold);
+        if(this.tm.sub)tt(ctx,this.tm.sub,pp.x+ppW/2,btnY3+bh+fs*0.3,`${fs*0.5}px sans-serif`,C.gold);}
       }
     }
     if(ph===PH.GO){
