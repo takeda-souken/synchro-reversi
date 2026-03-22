@@ -1127,7 +1127,7 @@ class GameScreen{
   // プレイヤーパネル: アイコン→改行→名前（中央寄せ）
   _drawPlayer(ctx,p,pos,pw,ph,fs,isActive,iCol,isYou=false,stoneCol=BLACK,isTeamTurn=false,isDone=false){
     // 「あなた」ラベル（パネルの上）
-    if(isYou)tt(ctx,T('youLabel'),pos.x+pw/2,pos.y-fs*0.45,`bold ${fs*0.55}px sans-serif`,C.gold);
+    const isBot=pos.y>this.oy+this.cs*BS/2;if(isYou)tt(ctx,T('youLabel'),pos.x+pw/2,isBot?pos.y+ph+fs*0.55:pos.y-fs*0.45,`bold ${fs*0.55}px sans-serif`,C.gold);
     const isBlack=stoneCol===BLACK;
     // 3段階: アクティブ > チームの番 > 非アクティブ
     const bgNorm=isBlack?'rgba(20,20,20,0.3)':'rgba(240,239,232,0.5)';
