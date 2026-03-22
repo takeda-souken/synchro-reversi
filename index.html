@@ -1428,17 +1428,19 @@ class GameScreen{
         ctx.rect(this.ox+c*cs2-pL, this.oy+r*cs2-pT, cs2+pL+pR, cs2+pT+pB);
       }
       ctx.fillStyle='rgba(0,0,0,1)';ctx.fill('evenodd');
-      // グロー枠（グループの外周辺のみ描画→隣接セル間の辺は省略）
+      // グロー枠（クリップ穴と同じ座標で外周辺のみ描画）
       ctx.globalAlpha=fadeIn*(0.5+0.3*Math.sin(performance.now()/300));
       for(const g of groups){
         const gSet=new Set(g.map(([r,c])=>`${r},${c}`));
         ctx.beginPath();
         for(const[r,c]of g){
-          const x=this.ox+c*cs2-pad,y=this.oy+r*cs2-pad,sz=cs2+pad*2;
-          if(!gSet.has(`${r-1},${c}`)){ctx.moveTo(x,y);ctx.lineTo(x+sz,y);}
-          if(!gSet.has(`${r+1},${c}`)){ctx.moveTo(x,y+sz);ctx.lineTo(x+sz,y+sz);}
-          if(!gSet.has(`${r},${c-1}`)){ctx.moveTo(x,y);ctx.lineTo(x,y+sz);}
-          if(!gSet.has(`${r},${c+1}`)){ctx.moveTo(x+sz,y);ctx.lineTo(x+sz,y+sz);}
+          const pT=gSet.has(`${r-1},${c}`)?0:pad,pB=gSet.has(`${r+1},${c}`)?0:pad;
+          const pL=gSet.has(`${r},${c-1}`)?0:pad,pR=gSet.has(`${r},${c+1}`)?0:pad;
+          const x=this.ox+c*cs2-pL,y=this.oy+r*cs2-pT,w=cs2+pL+pR,h=cs2+pT+pB;
+          if(!gSet.has(`${r-1},${c}`)){ctx.moveTo(x,y);ctx.lineTo(x+w,y);}
+          if(!gSet.has(`${r+1},${c}`)){ctx.moveTo(x,y+h);ctx.lineTo(x+w,y+h);}
+          if(!gSet.has(`${r},${c-1}`)){ctx.moveTo(x,y);ctx.lineTo(x,y+h);}
+          if(!gSet.has(`${r},${c+1}`)){ctx.moveTo(x+w,y);ctx.lineTo(x+w,y+h);}
         }
         ctx.strokeStyle=C.gold;ctx.lineWidth=3;ctx.stroke();
       }
