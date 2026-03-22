@@ -1419,27 +1419,30 @@ class GameScreen{
             if(grid.has(nk)&&!visited.has(nk)){visited.add(nk);q.push([r+dr,c+dc]);}}}
         groups.push(group);
       }
-      // クリップ: グループのバウンディングボックスで穴を開ける
+      // クリップ: 個別セルごとに穴を開ける（候補マスだけ正確に）
       ctx.beginPath();ctx.rect(0,0,W,H);
-      for(const g of groups){
-        const minR=Math.min(...g.map(v=>v[0])),maxR=Math.max(...g.map(v=>v[0]));
-        const minC=Math.min(...g.map(v=>v[1])),maxC=Math.max(...g.map(v=>v[1]));
-        const gx=this.ox+minC*cs2-pad,gy=this.oy+minR*cs2-pad;
-        const gw=(maxC-minC+1)*cs2+pad*2,gh=(maxR-minR+1)*cs2+pad*2,rd=8;
-        ctx.moveTo(gx+rd,gy);ctx.lineTo(gx+gw-rd,gy);ctx.quadraticCurveTo(gx+gw,gy,gx+gw,gy+rd);
-        ctx.lineTo(gx+gw,gy+gh-rd);ctx.quadraticCurveTo(gx+gw,gy+gh,gx+gw-rd,gy+gh);
-        ctx.lineTo(gx+rd,gy+gh);ctx.quadraticCurveTo(gx,gy+gh,gx,gy+gh-rd);
-        ctx.lineTo(gx,gy+rd);ctx.quadraticCurveTo(gx,gy,gx+rd,gy);
+      for(const s of t.spots){
+        const sz=s.r*2+pad*2;
+        const sx=s.x-s.r-pad,sy=s.y-s.r-pad,rd=8;
+        ctx.moveTo(sx+rd,sy);ctx.lineTo(sx+sz-rd,sy);ctx.quadraticCurveTo(sx+sz,sy,sx+sz,sy+rd);
+        ctx.lineTo(sx+sz,sy+sz-rd);ctx.quadraticCurveTo(sx+sz,sy+sz,sx+sz-rd,sy+sz);
+        ctx.lineTo(sx+rd,sy+sz);ctx.quadraticCurveTo(sx,sy+sz,sx,sy+sz-rd);
+        ctx.lineTo(sx,sy+rd);ctx.quadraticCurveTo(sx,sy,sx+rd,sy);
       }
       ctx.fillStyle='rgba(0,0,0,1)';ctx.fill('evenodd');
-      // グロー枠（グループ単位で1つの枠）
+      // グロー枠（グループの外周辺のみ描画→隣接セル間の辺は省略）
       ctx.globalAlpha=fadeIn*(0.5+0.3*Math.sin(performance.now()/300));
       for(const g of groups){
-        const minR=Math.min(...g.map(v=>v[0])),maxR=Math.max(...g.map(v=>v[0]));
-        const minC=Math.min(...g.map(v=>v[1])),maxC=Math.max(...g.map(v=>v[1]));
-        const gx=this.ox+minC*cs2-pad,gy=this.oy+minR*cs2-pad;
-        const gw=(maxC-minC+1)*cs2+pad*2,gh=(maxR-minR+1)*cs2+pad*2;
-        rr(ctx,gx,gy,gw,gh,8);ctx.strokeStyle=C.gold;ctx.lineWidth=3;ctx.stroke();
+        const gSet=new Set(g.map(([r,c])=>`${r},${c}`));
+        ctx.beginPath();
+        for(const[r,c]of g){
+          const x=this.ox+c*cs2-pad,y=this.oy+r*cs2-pad,sz=cs2+pad*2;
+          if(!gSet.has(`${r-1},${c}`)){ctx.moveTo(x,y);ctx.lineTo(x+sz,y);}
+          if(!gSet.has(`${r+1},${c}`)){ctx.moveTo(x,y+sz);ctx.lineTo(x+sz,y+sz);}
+          if(!gSet.has(`${r},${c-1}`)){ctx.moveTo(x,y);ctx.lineTo(x,y+sz);}
+          if(!gSet.has(`${r},${c+1}`)){ctx.moveTo(x+sz,y);ctx.lineTo(x+sz,y+sz);}
+        }
+        ctx.strokeStyle=C.gold;ctx.lineWidth=3;ctx.stroke();
       }
     }else{
       ctx.fillStyle='rgba(0,0,0,1)';ctx.fillRect(0,0,W,H);
