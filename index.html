@@ -1404,7 +1404,7 @@ class GameScreen{
     ctx.save();ctx.globalAlpha=fadeIn*0.85;
     if(t.spots&&t.spots.length>0){
       // 隣接スポットをグループ化（枠の重なり防止）
-      const pad=6;
+      const pad=0;
       const cs2=this.cs||30;
       const grid=new Set();const spotMap=new Map();
       for(const s of t.spots){
