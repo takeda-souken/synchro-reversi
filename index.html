@@ -39,8 +39,9 @@ const I18N={
   // ゲーム中
   thinkingOf:{ja:'{name}さん 考え中...',en:'{name} thinking...'},
   playOf:{ja:'{name}さん 打って！',en:'{name}, your turn!'},
-  confirmQ:{ja:'ここでいい？',en:'OK?'},
+  confirmQ:{ja:'ここに決定！',en:'Place here!'},
   coopWarn:{ja:'⚠ 相方と合わないと置けないかも',en:'⚠ Needs partner sync'},
+  confirmHint:{ja:'他の場所タップで変更',en:'Tap elsewhere to change'},
   teamThinking:{ja:'{i1}{i2} 考え中…',en:'{i1}{i2} thinking…'},
   teamDecided:{ja:'{i1}{i2} 決定！',en:'{i1}{i2} decided!'},
   gameStart:{ja:'🎮 開始！',en:'🎮 START!'},
@@ -1315,20 +1316,19 @@ class GameScreen{
     }
     if(ph===PH.PC&&curP){
       if(mob){
-        const bw=Math.min(eW*0.4,180),bh=Math.max(fs*1.8,48);
+        const bw=Math.min(eW*0.55,220),bh=Math.max(fs*2,52);
         const bSz2=this.cs*BS,by2=this.oy+bSz2+fs*3.5;
-        tt(ctx,this.tm.msg,cx,by2-fs*0.5,`bold ${fs*0.6}px sans-serif`,C.gold);
-        if(this.tm.sub)tt(ctx,this.tm.sub,cx,by2+fs*0.1,`${fs*0.5}px sans-serif`,C.gold);
-        const btnY3=by2+fs*0.6,gap3=fs*0.5;
-        drawBtn(ctx,'✓',cx-bw-gap3/2,btnY3,bw,bh,'#2d9e5f','#fff');this.btns.push({id:'ok',x:cx-bw-gap3/2,y:btnY3,w:bw,h:bh});
-        drawBtn(ctx,'✗',cx+gap3/2,btnY3,bw,bh,'#c04040','#fff');this.btns.push({id:'ng',x:cx+gap3/2,y:btnY3,w:bw,h:bh});
+        if(this.tm.sub)tt(ctx,this.tm.sub,cx,by2-fs*0.3,`${fs*0.5}px sans-serif`,C.gold);
+        const btnY3=by2+fs*0.3;
+        drawBtn(ctx,T('confirmQ'),cx-bw/2,btnY3,bw,bh,'#2d9e5f','#fff');this.btns.push({id:'ok',x:cx-bw/2,y:btnY3,w:bw,h:bh});
+        tt(ctx,T('confirmHint'),cx,btnY3+bh+fs*0.5,`${fs*0.45}px sans-serif`,C.sub);
       }else{
         const pi=ps.indexOf(curP);const pp=this.pPos[pi];
-        if(pp){const bw=Math.min(ppW*0.9,fs*2.8),bh=Math.max(fs*1.1,30);const bx=pp.x+(ppW-bw)/2;const by2=pp.y+ppH+fs*0.6;
-        tt(ctx,this.tm.msg,pp.x+ppW/2,by2,`bold ${fs*0.5}px sans-serif`,C.gold);const btnY3=by2+fs*0.35;
-        drawBtn(ctx,'✓',bx,btnY3,bw*0.45,bh,'#2d9e5f','#fff');this.btns.push({id:'ok',x:bx,y:btnY3,w:bw*0.45,h:bh});
-        drawBtn(ctx,'✗',bx+bw*0.55,btnY3,bw*0.45,bh,'#c04040','#fff');this.btns.push({id:'ng',x:bx+bw*0.55,y:btnY3,w:bw*0.45,h:bh});
-        if(this.tm.sub)tt(ctx,this.tm.sub,pp.x+ppW/2,btnY3+bh+fs*0.3,`${fs*0.5}px sans-serif`,C.gold);}
+        if(pp){const bw=Math.min(ppW*1.2,fs*3.5),bh=Math.max(fs*1.1,30);const bx=pp.x+(ppW-bw)/2;const by2=pp.y+ppH+fs*0.6;
+        if(this.tm.sub)tt(ctx,this.tm.sub,pp.x+ppW/2,by2,`${fs*0.4}px sans-serif`,C.gold);
+        const btnY3=by2+fs*0.35;
+        drawBtn(ctx,T('confirmQ'),bx,btnY3,bw,bh,'#2d9e5f','#fff');this.btns.push({id:'ok',x:bx,y:btnY3,w:bw,h:bh});
+        tt(ctx,T('confirmHint'),pp.x+ppW/2,btnY3+bh+fs*0.3,`${fs*0.3}px sans-serif`,C.sub);}
       }
     }
     if(ph===PH.GO){
