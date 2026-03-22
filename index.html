@@ -1419,11 +1419,11 @@ class GameScreen{
             if(grid.has(nk)&&!visited.has(nk)){visited.add(nk);q.push([r+dr,c+dc]);}}}
         groups.push(group);
       }
-      // クリップ: 個別セルごとに穴を開ける（候補マスだけ正確に）
+      // クリップ: グリッド座標ベースでセル全体サイズの穴を開ける
       ctx.beginPath();ctx.rect(0,0,W,H);
-      for(const s of t.spots){
-        const sz=s.r*2+pad*2;
-        const sx=s.x-s.r-pad,sy=s.y-s.r-pad,rd=8;
+      for(const key of grid){
+        const[r,c]=key.split(',').map(Number);
+        const sx=this.ox+c*cs2-pad,sy=this.oy+r*cs2-pad,sz=cs2+pad*2,rd=8;
         ctx.moveTo(sx+rd,sy);ctx.lineTo(sx+sz-rd,sy);ctx.quadraticCurveTo(sx+sz,sy,sx+sz,sy+rd);
         ctx.lineTo(sx+sz,sy+sz-rd);ctx.quadraticCurveTo(sx+sz,sy+sz,sx+sz-rd,sy+sz);
         ctx.lineTo(sx+rd,sy+sz);ctx.quadraticCurveTo(sx,sy+sz,sx,sy+sz-rd);
