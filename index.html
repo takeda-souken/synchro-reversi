@@ -1031,7 +1031,7 @@ class TitleScreen{
       const tipLines=tipMsg.split('\n');
       const app=window._app;const mx=app?app.hoverX:hx;const my=app?app.hoverY:hy+hh;
       for(let i=0;i<tipLines.length;i++){
-        tt(ctx,tipLines[i],mx,my+hh+fs*0.3+i*fs*0.55,`${fs*0.5}px sans-serif`,fgMain,'center','top');
+        tt(ctx,tipLines[i],Math.min(mx,W-fs*5),my+hh+fs*0.3+i*fs*0.55,`${fs*0.5}px sans-serif`,fgMain,'center','top');
       }
     }
     this.btns.push({id:'help',x:hx,y:hy,w:hw,h:hh});
@@ -1172,14 +1172,14 @@ class GameScreen{
     // 盤面: 左右にプレイヤーパネルを確保（モバイルでは縮小）
     const sidePanel=fs*(mob?2.8:3.5);
     const bPx=Math.min(eW-sidePanel*2,bArea*0.85);
-    this.cs=bPx/BS;this.ox=(W-bPx)/2;this.oy=topH+(bArea-bPx)/2;
+    this.cs=bPx/BS;this.ox=(W-bPx)/2;this.oy=mob?topH+fs*1.5:topH+(bArea-bPx)/2;
     const cn=this.bd.cnt();const ph=this.tm.phase;
     // 赤黒・白青ペアリング: 石色に紐づく（チームではなく）
     const iCol=this.tm.tCol===BLACK?C.tA:C.tB;
     const{pw:ppW,ph:ppH}=this._calcPlayerPos(W,H,fs);
 
     // スプラバー（モバイルでは石数表示スペースを確保）
-    const numPad=mob?barH*0.8:0;
+    const numPad=mob?barH*1.0:0;
     this.ren.splatBar(lox+numPad,barP,eW-numPad*2,barH,this.bd,false,this.tm.swap);
 
     // ホームボタン + 速度ボタン（バーの下）
@@ -1300,7 +1300,7 @@ class GameScreen{
         const isYou2=humanCount===1&&!curP.isCPU;
         // 「あなた」ラベルと被らないようにずらす
         const msgY2=isTop2?pp2.y+ppH+fs*0.5:pp2.y-(isYou2?fs*1.1:fs*0.6);
-        tt(ctx,this.tm.msg,pp2.x+ppW/2,msgY2,`bold ${fs*0.55}px sans-serif`,C.gold);
+        const msgX2=Math.min(Math.max(pp2.x+ppW/2,fs*3),W-fs*3);tt(ctx,this.tm.msg,msgX2,msgY2,`bold ${fs*0.55}px sans-serif`,C.gold);
       }
     }
     if(ph===PH.PC&&curP){
