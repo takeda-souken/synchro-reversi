@@ -1584,7 +1584,7 @@ class GameScreen{
     const bSz=this.cs*BS;
     const isTop=pos.y<this.oy+bSz/2;
     // パネル基準: 上段→パネルの上、下段→パネルの下
-    const px=pos.x+(ppW2-pw)/2;
+    const px=Math.max(4,Math.min(pos.x+(ppW2-pw)/2,W-pw-4));
     const py=isTop?pos.y-ph2-fs*0.2:pos.y+ppH2+fs*0.2;
     const p=this.tm.ps[bb.corner%4];
     const swap=this.tm.swap;
