@@ -1,0 +1,1897 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Synchronized Reversi</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%232d8a4e'/><circle cx='8' cy='11' r='5' fill='%23222'/><circle cx='8' cy='21' r='5' fill='%23222'/><circle cx='24' cy='11' r='5' fill='%23f0efe8'/><circle cx='24' cy='21' r='5' fill='%23f0efe8'/><text x='16' y='19' text-anchor='middle' font-size='7' font-weight='bold' fill='%23d4a843' font-family='sans-serif'>vs</text></svg>">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100%;overflow:hidden;background:#1a5c32;touch-action:manipulation;user-select:none;-webkit-user-select:none;}
+canvas{display:block;width:100%;height:100%;}
+</style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+<script>
+// ═══════════════════════════════════════════════════════════════
+// Synchronized Reversi v1.0 — 2vs2 Party Reversi
+// by たけぴー & ももぴー (2026-03-20)
+// ═══════════════════════════════════════════════════════════════
+
+// i18n: 言語設定（'ja' or 'en'）
+let LANG=(navigator.language||'ja').startsWith('ja')?'ja':'en';
+const I18N={
+  // タイトル・メニュー
+  subtitle:{ja:'2vs2 パーティーリバーシ',en:'2vs2 Party Reversi'},
+  howMany:{ja:'何人で遊ぶ？',en:'How many players?'},
+  firstTurn:{ja:'先攻',en:'1st'},
+  secondTurn:{ja:'後攻',en:'2nd'},
+  layout:{ja:'初期配置',en:'Layout'},
+  speed:{ja:'観戦速度',en:'Speed'},
+  start:{ja:'▶  はじめる',en:'▶  START'},
+  // レイアウト名
+  standard:{ja:'スタンダード',en:'Standard'},
+  parallel:{ja:'パラレル',en:'Parallel'},
+  diamond:{ja:'ダイヤモンド',en:'Diamond'},
+  scatter:{ja:'スキャッター',en:'Scatter'},
+  random:{ja:'ランダム',en:'Random'},
+  // ゲーム中
+  thinkingOf:{ja:'{name}さん 考え中...',en:'{name} thinking...'},
+  playOf:{ja:'{name}さん 打って！',en:'{name}, your turn!'},
+  confirmQ:{ja:'ここでいい？',en:'OK?'},
+  coopWarn:{ja:'⚠ 相方と合わないと置けないかも',en:'⚠ Needs partner sync'},
+  teamThinking:{ja:'{i1}{i2} 考え中…',en:'{i1}{i2} thinking…'},
+  teamDecided:{ja:'{i1}{i2} 決定！',en:'{i1}{i2} decided!'},
+  gameStart:{ja:'🎮 開始！',en:'🎮 START!'},
+  pass:{ja:'パス！',en:'Pass!'},
+  crashed:{ja:'💥 かぶった！',en:'💥 Collision!'},
+  crashedSub:{ja:'1個だけ置けた',en:'Only one placed'},
+  opened:{ja:'✨ オープン！',en:'✨ Open!'},
+  openedSub:{ja:'2個置きます！',en:'Placing two!'},
+  // 勝敗
+  teamWin:{ja:'{s}チームの勝ち！',en:'Team {s} wins!'},
+  draw:{ja:'🤝 引き分け！',en:'🤝 Draw!'},
+  toResult:{ja:'📊 リザルト',en:'📊 Result'},
+  // リザルト
+  retry:{ja:'🔄 もう一度',en:'🔄 Retry'},
+  home:{ja:'🏠 ホーム',en:'🏠 Home'},
+  turnStat:{ja:'{t}ターン  かぶり●{dA} ○{dB}  角{c}/4',en:'{t} turns  Dup●{dA} ○{dB}  Corner{c}/4'},
+  turnLabel:{ja:'ターン {n}/{max}',en:'Turn {n}/{max}'},
+  cornerLegend:{ja:'角取得',en:'Corner'},
+  dupLegend:{ja:'かぶり',en:'Dup'},
+  youLabel:{ja:'あなた',en:'YOU'},
+  // ゲーム中（追加）
+  iThinkingOf:{ja:'{icon} {name}さん 考え中...',en:'{icon} {name} thinking...'},
+  iPlayOf:{ja:'{icon} {name}さん 打って！',en:'{icon} {name}, your turn!'},
+  cancel:{ja:'✗ やめる',en:'✗ Cancel'},
+  ok:{ja:'✓',en:'✓'},
+  ng:{ja:'✗',en:'✗'},
+  // リザルト（追加）
+  dupCount:{ja:'{n}かぶり',en:'{n} dup'},
+  cornerCount:{ja:'{n}角',en:'{n} corner'},
+  // 人数選択
+  handoff:{ja:'{name}さんに渡して',en:'Pass to {name}'},
+  tapContinue:{ja:'タップで続行',en:'Tap to continue'},
+  // チュートリアル（ゲーム中）
+  tut1:{ja:'2vs2のリバーシにようこそ！\nさっそくやってみましょう！',en:'Welcome to 2vs2 Reversi!\nLet\'s jump right in!'},
+  tut2:{ja:'確実にひっくり返せる場所には\nこのマーカーがでるよ！',en:'Guaranteed flip spots\nare marked like this!'},
+  tutCoop:{ja:'このマークは、相棒と\n息が合えばひっくり返せる……かも？！',en:'This mark means you might\nflip if your partner syncs up!'},
+  tutDup:{ja:'おっと！同じ場所を\n選んじゃった！',en:'Oops! They picked\nthe same spot!'},
+  tutHelp:{ja:'❓',en:'❓'},
+  tutHelpOn:{ja:'チュートリアルON！\nゲーム中に説明がでるよ',en:'Tutorial ON!\nTips will appear in-game'},
+  tutHelpOff:{ja:'チュートリアルOFF',en:'Tutorial OFF'},
+  tutRescue:{ja:'石が全滅！救済措置で\n1つだけ自由に置けるよ\n（角はできるだけダメ！）',en:'All stones gone! You get\none free placement\n(corners blocked if possible!)'},
+};
+function T(key,vars){let s=(I18N[key]||{})[LANG]||key;if(vars)for(const[k,v]of Object.entries(vars))s=s.replace(`{${k}}`,v);return s;}
+
+const EMPTY=0,BLACK=1,WHITE=2,BS=8;
+const DIRS=[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
+
+// チームプリセット [チームIcon, P1Icon, P2Icon, P1名, P2名]
+const PRESETS=[
+  // [チームIcon, P1Icon, P2Icon, P1名ja, P2名ja, P1名en, P2名en]
+  ['🌲','🐺','🦊','おおかみ','きつね','Wolf','Fox'],
+  ['🌊','🐙','🐬','たこ','いるか','Octopus','Dolphin'],
+  ['🐾','🐱','🐹','ねこ','はむすたー','Cat','Hamster'],
+  ['🥕','🐴','🐰','おうま','うさぎ','Horse','Rabbit'],
+  ['🗻','🥷','🍣','にんじゃ','おすし','Ninja','Sushi'],
+  ['🎄','🎅','🦌','サンタ','トナカイ','Santa','Reindeer'],
+  ['🎃','👻','🦇','おばけ','こうもり','Ghost','Bat'],
+  ['🌙','⭐','🦉','おほし','ふくろう','Star','Owl'],
+  ['🏰','👑','👸','おうさま','おうひさま','King','Queen'],
+];
+
+const LAYOUTS={
+  standard:[[3,3,WHITE],[3,4,BLACK],[4,3,BLACK],[4,4,WHITE]],
+  parallel:[[3,3,BLACK],[3,4,WHITE],[4,3,BLACK],[4,4,WHITE]],
+  diamond:[[1,3,BLACK],[1,4,WHITE],[3,1,WHITE],[3,6,BLACK],[4,1,BLACK],[4,6,WHITE],[6,3,WHITE],[6,4,BLACK]],
+  scatter:[[1,1,BLACK],[1,6,WHITE],[2,4,BLACK],[3,2,WHITE],[4,5,BLACK],[5,3,WHITE],[6,1,BLACK],[6,6,WHITE]],
+  random:null,
+};
+const LKEYS=Object.keys(LAYOUTS);
+const LNAMES={standard:'standard',parallel:'parallel',diamond:'diamond',scatter:'scatter',random:'random'};
+
+const C={bg:'#1a5c32',bgNeutral:'#2a2a2e',boardBg:'#2d8a4e',grid:'#1a5c32',
+  // 戦況背景色（RGB値）: 黒チーム=暗い赤黒, 白チーム=明るい白青
+  // 赤黒=ほんのり赤の黒、白青=ほんのり青の白
+  bgA:[38,22,22],bgB:[232,235,240],bgN:[42,42,46],
+  black:'#2c2c2c',white:'#f0efe8',bEdge:'#1a1a1a',wEdge:'#c8c8c0',
+  gold:'#d4a843',goldL:'#f0d68a',accent:'#e05040',
+  tA:'#e05040',tABg:'rgba(224,80,64,0.15)',tB:'#4ea8c4',tBBg:'rgba(78,168,196,0.15)',
+  txt:'#f0efe8',sub:'rgba(240,239,232,0.5)',ov:'rgba(10,30,15,0.92)',
+  hi:'rgba(212,168,67,0.5)',sel:'rgba(224,80,64,0.55)',
+  barB:'#3a3a3a',barW:'#e8e7e0',pan:'rgba(0,0,0,0.25)'};
+
+const CPUW=[[100,-20,10,5,5,10,-20,100],[-20,-40,-5,-5,-5,-5,-40,-20],[10,-5,4,2,2,4,-5,10],[5,-5,2,0,0,2,-5,5],[5,-5,2,0,0,2,-5,5],[10,-5,4,2,2,4,-5,10],[-20,-40,-5,-5,-5,-5,-40,-20],[100,-20,10,5,5,10,-20,100]];
+const CPERS=[{c:1.5,f:2,r:3},{c:0.8,f:5,r:8},{c:2,f:1,r:2},{c:0.5,f:3,r:14}];
+
+// セリフ [speaker0, speaker1] 掛け合い
+const D_LINES=[['くーっ！そっちかー！','ごめんて！'],['まさかの同じ手！？','考えること同じか…'],['息ぴったり…じゃなくて！','シンクロ率高すぎ！'],['もったいない〜！','次は分散するから！'],['テレパシー！？','んなわけあるかい'],['読みが被った…','だよね、そこだよね'],['シンクロしちゃった！','してる場合か！'],['えぇぇぇ！？','こっちのセリフ！'],['角狙いがバレてる…','バレバレやん'],['被った！もう！','いやお前がズレろよ'],['せっかくのチャンスが…','ドンマイドンマイ'],['信じらんない…','俺もだよ…'],['なんでそこ！？','なんでそっち！？'],['うわぁぁぁ','あちゃー'],['考えすぎた…','考えなさすぎた…'],['角にいきたかった…','同じく…'],['1個損した！','取り返そ！'],['ダブったー！','もったいなー！'],['やらかした…','どっちもね'],['相方の気持ちがわかりすぎる','それ褒めてないよね？'],['ペア解消しようかな…','ちょっと待って！？'],['AIなのにこんなミス…','AIだからこそ迷うの！'],['計算が合わない','感覚でいこ感覚で'],['初手から被ることある！？','あるんだよなぁ…'],['読み合い苦手かも…','お互い様でしょ']];
+const N_LINES=[['ナイス連携！','へへへ'],['いい感じ！','でしょ？'],['さすが相棒！','お互い様！'],['バッチリ！','息ぴったり！'],['完璧な分担！','読めてたよ'],['攻めと守り、完璧！','阿吽の呼吸ってやつ'],['ナイスカバー！','任せとけ！'],['その手があったか！','ふふん'],['いい散らばり方！','作戦通り…のつもり'],['二面作戦成功！','挟み撃ちだ！'],['やるじゃん！','あんたもね'],['最高のコンビだわ','照れるな'],['広げたね〜！','一気に行くよ！'],['うまいうまい！','えへへ'],['相方ガチャ当たりだわ','それはこっちのセリフ'],['ここ取れたの大きい！','角に繋がるよ！'],['流れ来てる！','畳みかけよう！'],['着実着実','地道にいこ'],['外周キープ！','端っこ大事'],['このペースでいこう','了解！']];
+// 状況セリフ（ターン数・スコア差に応じて割り込み）
+const COOP_LINES=[
+  ['おい、わかってるよな？','ああ、ここが勝負だ！'],
+  ['ここしかない…！','信じてるぞ！'],
+  ['賭けに出る！','合わせろよ！'],
+  ['勝負だ！','来い！'],
+  ['読めてるよな？','当然！'],
+  ['ここで決める！','任せとけ！'],
+  ['イチかバチか…！','やるしかない！'],
+  ['シンクロするぞ！','了解！'],
+  ['大逆転いくよ！','ついてく！'],
+  ['最後の賭けだ…','信じる！'],
+];
+const COOP_SUCCESS=[
+  ['読めてた！！','最高！！'],
+  ['シンクロ成功！！','やった！！'],
+  ['これぞシンクロ！','天才かよ！'],
+  ['合った！！','奇跡！'],
+  ['通じたー！！','言葉いらずだね'],
+];
+const COOP_FAIL=[
+  ['合わなかった…','ごめん…'],
+  ['そっちかぁ…','読み違えた…'],
+  ['惜しい…！','次こそ！'],
+  ['くぅ…！','ドンマイ…'],
+];
+const SIT_LINES={
+  earlyDupe:[['初手から被ることある！？','あるんだよなぁ…'],['いきなりシンクロ！？','開幕から！？']],
+  winning:[['ふふ、勝ったかな','油断禁物！'],['このまま逃げ切る！','押せ押せ！'],['圧勝ムード！','まだ油断しないで']],
+  losing:[['やばいやばい！','まだいける！'],['巻き返すぞ！','ここからここから'],['追い詰められてる…','諦めんな！']],
+  lateGame:[['最後まで気を抜くな！','了解！'],['終盤勝負！','集中集中'],['あと少し…！','最後まで丁寧に']],
+  cornerGet:[['角きたー！！','これはデカい！'],['角ゲット！','最高！'],['ここ取れたの大きすぎ！','勝ちが見えた！']],
+  // 大量フリップ（5枚以上）
+  bigFlip:[['うおおお！大量！','ごっそり！'],['一気にひっくり返した！','気持ちいい！'],['これは痛い…相手に','ざまぁ！…じゃなくてナイス！'],['爆発力！','破壊力やばい！'],['全部持ってった！','壮観！']],
+  // 大量フリップを食らった側
+  bigFlipVic:[['うわぁぁぁ！','一瞬で…'],['嘘でしょ…','壊滅的…'],['全部持ってかれた…','立ち直れない…'],['ひどい…','なんてことを…'],['痛すぎる…','これはキツい…']],
+  // 協力候補成功
+  coopSuccess:[['協力成功！！','シンクロした！'],['合わせた！！','通じ合ってる！'],['読めてた！','天才ペア！'],['ここで合うか！','奇跡！'],['連携プレー！','これがチームワーク！']],
+};
+// 勝敗確定セリフ [勝者1, 勝者2, 敗者1, 敗者2] × 100パターン
+const END_LINES=[
+  // 喜び系
+  ['やったー！！','最高！！','くぅ…！','次は負けない…！'],
+  ['勝った勝った！','へへへ','うわぁぁ…','悔しい…'],
+  ['完璧だった！','息ぴったり！','読まれてた…','手も足も出ない…'],
+  ['うおおお！！','テンション上がる！','嘘でしょ…','マジか…'],
+  ['圧勝！','余裕だったね','ぐぬぬ…','言い訳させて…'],
+  ['勝利の味は最高！','乾杯！','もう一回！','リベンジさせろ！'],
+  ['いえーい！','ハイタッチ！','ぐはっ…','つらい…'],
+  ['楽しかった！','ナイスゲーム！','楽しかったけど悔しい','次こそ…'],
+  ['強すぎた！','当然でしょ','認めたくない…','でも強かった…'],
+  ['大勝利！','もう一回やる？','もう一回やろう！','今度は勝つ！'],
+  // シンクロ系
+  ['シンクロ率100%！','以心伝心！','噛み合わなかった…','タイミングが…'],
+  ['読み合い完璧！','相方最高！','読みが甘かった…','もっと考えれば…'],
+  ['チームワークの勝利！','信じてたよ！','連携不足だった…','ごめん…'],
+  ['コンビネーション！','最高のペア！','バラバラだった…','合わせられなかった…'],
+  ['阿吽の呼吸！','言葉いらず！','ズレまくり…','呼吸が合わない…'],
+  ['シンクロの力！','二人の絆！','息が合えば…','次は合わせる！'],
+  ['ペアの力！','相棒！','ペア解消しないでね？','しないよ！…たぶん'],
+  ['テレパシー発動！','通じ合ってた！','読めなかった…','壁が厚い…'],
+  ['神連携！','天才かよ！','うちらも連携したい…','練習しよ…'],
+  ['完全にリンクしてた！','最高のパートナー！','羨ましい…','悔しすぎる…'],
+  // 接戦系
+  ['ギリギリ！','冷や汗かいた…','あと一歩だった…','惜しかった…'],
+  ['薄氷の勝利…！','心臓持たない！','紙一重だったのに…','悔やまれる…'],
+  ['最後の一手で！','ドキドキした！','あの一手が…','あそこで…'],
+  ['辛勝！','疲れた…','紙一重…','もう少しだったのに'],
+  ['ヒヤヒヤしたー！','もう無理かと…','追い詰めたのに…','あとちょっと…'],
+  ['首の皮一枚！','生きた心地しない','惜しすぎる…','なんでそうなる…'],
+  ['なんとか…！','奇跡だよこれ','奇跡で負けた…','理不尽…'],
+  ['一手差！','もし被らなければ…','あのかぶりがなければ…','もう！'],
+  ['死闘だった…','名勝負！','名勝負だけど負けた','次は勝つ'],
+  ['際どかった！','お互い全力だった','全力出したのに…','くやしー！'],
+  // 圧勝系
+  ['圧倒的！','もはや芸術','手も足も…','なす術なし…'],
+  ['パーフェクト！','美しい…','美しく負けた…','ぐうの音も出ない'],
+  ['教科書みたいな勝ち方','お手本だね','教科書通りにやられた','勉強になった…'],
+  ['角全部取った！','戦略勝ち！','角を一つも…','取れなかった…'],
+  ['盤面制圧！','全部うちの色！','真っ黒（白）…','一色に染まった…'],
+  ['無双！','止められる者なし！','止められなかった…','強すぎ…'],
+  ['完全試合！','ノーミス！','ミスだらけだった…','反省点多い…'],
+  ['格が違った','レベルが違う','格の差を感じた…','修行が足りない…'],
+  ['一方的！','申し訳ない…ちょっと','全然ダメだった…','実力不足…'],
+  ['ぶっちぎり！','速すぎた？','ついていけない…','置いてかれた…'],
+  // 逆転系
+  ['逆転勝ち！！','諦めなくてよかった！','逆転された…','油断した…'],
+  ['最後に笑うのは！','うちらだ！','最後の最後で…','信じられない…'],
+  ['どんでん返し！','ドラマだ！','ドラマの被害者…','まさか…'],
+  ['粘り勝ち！','しぶとく行った！','粘られた…','崩せなかった…'],
+  ['ここから巻き返す…巻き返した！','すごい…自分で言う？','あれだけリードしてたのに…','守りきれなかった…'],
+  ['奇跡の逆転！','運命を感じる！','運命のいたずら…','残酷…'],
+  ['後半の追い上げ！','ギアが入った！','前半のリードが…','溶けた…'],
+  ['逆境からの！','生還！','生かしてしまった…','詰めが甘い…'],
+  ['不死鳥！','蘇った！','とどめ刺せなかった…','倒し損ねた…'],
+  ['大逆転劇！','映画みたい！','映画の悪役になった…','役回りが…'],
+  // かぶり関連
+  ['かぶらなかった勝因！','学習した！','かぶりすぎた…','反省…'],
+  ['被り回避のプロ！','読みが深い！','読みが浅かった…','同じ手ばかり…'],
+  ['分散配置の勝利！','効率的！','効率悪かった…','もったいない…'],
+  ['無駄なし！','1石も無駄にしない','無駄が多かった…','精度が…'],
+  ['かぶり0回！','奇跡！','うちらかぶりまくり…','何回被った？'],
+  // ユーモア系
+  ['運も実力のうち！','たぶんね','実力で負けたわ','認める…'],
+  ['勝因：相方が天才','いやあなたが！','敗因：相方が…','おい！'],
+  ['作戦通り！','えっ作戦あったの？','相手に作戦があった…','うちも立てよう…'],
+  ['CPUの本気を見た？','まだ本気じゃないよ','CPU強すぎ…','設定変えて…'],
+  ['このゲーム得意かも','調子乗りすぎ注意','得意じゃないかも…','苦手かも…'],
+  ['ふふーん','ドヤ顔やめて','ドヤ顔が憎い…','うっ…'],
+  ['余裕でした','嘘つけ焦ってたでしょ','余裕に見えて悔しい','次は焦らせる！'],
+  ['才能の差かな','そこまで言う？','才能の差は…','認めない！'],
+  ['運ゲーだから！','えっ実力だよ？','運が悪かっただけ…','そうだよね…？'],
+  ['ごちそうさま！','ペロリ','食われた…','消化された…'],
+  // 励まし系
+  ['いい試合だった！','ほんとにね！','ありがとう…','いい経験になった'],
+  ['次もやろう！','もちろん！','悔しいけど…楽しかった','もう一回！'],
+  ['強かったよ！','お互いに！','そう言ってもらえると…','救われる…'],
+  ['ナイスファイト！','全力だった！','全力で負けた…','清々しい負け'],
+  ['また遊ぼう！','いつでも！','リベンジさせて！','望むところ！'],
+  ['白熱した！','ベストゲーム！','ベストゲームだけど負け…','複雑…'],
+  ['対戦ありがとう！','こちらこそ！','こちらこそ…','楽しかった…'],
+  ['腕上げたね！','そう？照れる','負けたけど成長した','次に活かす！'],
+  ['実力伯仲！','紙一重だった','紙一重で負けるのが一番つらい','わかる…'],
+  ['リスペクト！','お互い様！','リスペクトするけど悔しい','素直！'],
+  // 戦略系
+  ['角の使い方が上手かった','あれが分岐点！','角を取られたのが…','致命的だった…'],
+  ['端を制した！','外周戦略！','中央に固まりすぎた…','広げられなかった…'],
+  ['序盤の布石が効いた','先を読んでた！','序盤で差がついた…','気づかなかった…'],
+  ['相手の裏をかいた！','心理戦勝ち！','読まれてた…','考えが透けてる…'],
+  ['守りが堅かった！','鉄壁！','崩せなかった…','守備力が…'],
+  ['攻めの姿勢が大事！','攻撃は最大の防御！','攻められっぱなし…','守りに入りすぎた…'],
+  ['バランスが良かった','攻守兼備！','バランス崩れた…','偏った…'],
+  ['少ない手数で効率的！','質の勝利！','量で押せなかった…','もっと考えれば…'],
+  ['終盤力！','ここ一番に強い！','終盤弱い…','鍛えないと…'],
+  ['全体を見れてた！','視野が広い！','視野が狭かった…','目の前しか見えてない…'],
+  // リアクション系
+  ['きたきたきた！','来ましたね！','行かれた…','止められない…'],
+  ['うひょー！','テンションMAX！','テンション下がる…','しょんぼり…'],
+  ['ガッツポーズ！','よっしゃ！','がっくり…','肩落ちる…'],
+  ['歓喜！','飛び上がる！','膝から崩れる…','立てない…'],
+  ['最高の気分！','ハッピー！','ブルーな気分…','沈む…'],
+  ['鳥肌！','感動した！','感動の負け…','泣きそう…'],
+  ['ウイニングラン！','走り回りたい！','足が重い…','動けない…'],
+  ['MVP！','いやお前が！','悔しいけどMVP認定…','あの人すごかった…'],
+  ['伝説の一戦！','語り継ごう！','語り継がれる負け…','歴史に刻まれた…'],
+  ['チャンピオン！','王座防衛！','王座陥落…','挑戦者に戻る…'],
+];
+// 僅差勝敗セリフ（差4以内）
+const END_CLOSE=[
+  ['あっぶな！','ギリギリ…！','あと1個だった…！','惜しすぎる…'],
+  ['薄氷！','心臓止まるかと…','もうちょいだったのに…','悔しすぎる…'],
+  ['冷や汗かいた…','生きた心地しない','紙一重…！','あとちょっと…'],
+  ['一手差！','もう無理かと…','その一手が…！','うぐぐ…'],
+  ['辛勝…！','ホッとした…','あー！もう！','もう一回！'],
+  ['ヒリヒリした！','名勝負だった','名勝負すぎて泣ける','もう一戦やろ？'],
+  ['首の皮一枚！','生還した…','もう少しだったのに…','くぅ…'],
+  ['紙一重の決着！','震える…','この差で…','悔やまれる…'],
+  ['心臓に悪い！','年取りそう…','あと1ターンあれば…','タラレバ…'],
+  ['もう二度とやりたくない…','え、もう？','もう一回やらせて！','今度こそ！'],
+];
+
+// === 英語版セリフ ===
+const D_LINES_EN=[['Ugh! You went THERE!?','My bad!'],['We picked the SAME spot!?','Great minds think alike...'],['Perfect sync... wait, NO!','Our sync rate is TOO high!'],['What a waste!','I\'ll spread out next time!'],['Telepathy!?','As if!'],['Our reads overlapped...','Right? That\'s THE spot'],['We synced up!','This is NOT the time for that!'],['WHAAAAT!?','That\'s MY line!'],['They read my corner play...','So obvious lol'],['Overlap! Ugh!','YOU move, not me!'],['There goes our chance...','No worries no worries'],['I can\'t believe it...','Same here...'],['Why THERE!?','Why THAT spot!?'],['Nooooo','Welp...'],['Overthought it...','Underthought it...'],['I wanted that corner...','Same...'],['Wasted a turn!','We\'ll make it up!'],['Doubled up!','Such a waste!'],['We blew it...','Both of us, yeah'],['I know my partner TOO well','That\'s not a compliment, is it?'],['Maybe we should split up...','WAIT WHAT!?'],['An AI making THIS mistake...','Even AI can hesitate!'],['The math doesn\'t add up','Just go with your gut!'],['Overlap on turn ONE!?','It happens, man...'],['Maybe I\'m bad at reads...','We both are, let\'s be real']];
+const N_LINES_EN=[['Nice combo!','Hehehe'],['Looking good!','Right?'],['Way to go, partner!','Right back at ya!'],['Nailed it!','Perfect sync!'],['Great split!','I read you like a book'],['Offense AND defense, perfect!','That\'s what teamwork looks like'],['Nice cover!','I got you!'],['Didn\'t see that coming!','Heh'],['Great spread!','All according to plan... kinda'],['Two-front attack worked!','Pincer move!'],['Not bad!','You too'],['Best duo ever','Stop, you\'re making me blush'],['We\'re expanding!','Let\'s go all in!'],['Nice nice!','Ehehe'],['Partner gacha jackpot','No, YOU\'RE the jackpot'],['Huge pickup!','That leads to the corner!'],['We\'re on a roll!','Let\'s keep the pressure on!'],['Steady steady','One step at a time'],['Holding the edges!','Edges are everything'],['Let\'s keep this pace','Roger!']];
+const COOP_LINES_EN=[['You know the play, right?','Yeah, this is it!'],['It\'s gotta be here...!','I believe in you!'],['Going all in!','Match me!'],['NOW!','Let\'s GO!'],['You read it, right?','Obviously!'],['We finish it HERE!','Leave it to me!'],['All or nothing...!','No choice but to send it!'],['Let\'s sync up!','Roger!'],['Comeback time!','Right behind you!'],['Last gamble...','I trust you!']];
+const COOP_SUCCESS_EN=[['Called it!!','LET\'S GO!!'],['Sync SUCCESS!!','We did it!!'],['THAT\'S what sync looks like!','Genius!'],['It matched!!','A miracle!'],['It got through!!','No words needed']];
+const COOP_FAIL_EN=[['Didn\'t line up...','Sorry...'],['You went there, huh...','I misread it...'],['So close...!','Next time for sure!'],['Ugh...!','Don\'t sweat it...']];
+const SIT_LINES_EN={
+  earlyDupe:[['Overlap on TURN ONE!?','It happens, man...'],['Synced right off the bat!?','From the very start!?']],
+  winning:[['Hehe, I think we got this','Don\'t jinx it!'],['Let\'s ride this out!','Push push push!'],['Total domination!','Don\'t let your guard down']],
+  losing:[['This is bad this is bad!','We can still do this!'],['Time to rally!','It starts now!'],['We\'re cornered...','Don\'t give up!']],
+  lateGame:[['Don\'t slack off now!','Roger!'],['Endgame showdown!','Focus up'],['Almost there...!','Stay sharp till the end']],
+  cornerGet:[['CORNER!!','That\'s HUGE!'],['Corner GET!','Amazing!'],['Getting that corner is MASSIVE!','I can taste the win!']],
+  bigFlip:[['WHOAAA! Huge flip!','Cleaned \'em out!'],['Flipped the whole board!','That feels SO good!'],['That\'s gotta hurt... for them','Rekt! ...I mean, nice play!'],['EXPLOSIVE!','Absolutely devastating!'],['Took everything!','What a sight!']],
+  bigFlipVic:[['NOOO!','In an instant...'],['You\'re kidding...','Wiped out...'],['They took it ALL...','I can\'t recover...'],['That\'s brutal...','How could they...'],['That stings...','This is rough...']],
+  coopSuccess:[['Co-op SUCCESS!!','We synced!'],['We matched!!','We\'re connected!'],['Read it perfectly!','Genius duo!'],['Synced right HERE!','It\'s a miracle!'],['Team play!','THIS is teamwork!']],
+};
+const END_LINES_EN=[['WE DID IT!!','THE BEST!!','Ugh...!','We\'ll get \'em next time...!'],['Victory is OURS!','Hehehe','Nooo...','So frustrating...'],['That was flawless!','Perfect sync!','They read us like a book...','Couldn\'t do a thing...'],['YESSS!!','I\'M SO HYPED!','No way...','For real...?'],['Dominated!','Easy peasy','Grr...','Let me explain...'],['Victory tastes SWEET!','Cheers!','Rematch!','Let us have another go!'],['LET\'S GOOO!','High five!','Oof...','That hurts...'],['That was fun!','GG!','Fun but painful','Next time for sure...'],['We were TOO strong!','Obviously','I don\'t wanna admit it...','But they were good...'],['Huge W!','Run it back?','Let\'s run it back!','We\'re winning this time!'],['100% sync rate!','Telepathy!','We were so off...','Timing was all wrong...'],['Our reads were ON POINT!','Best partner ever!','Our reads were trash...','Should\'ve thought harder...'],['Teamwork wins!','I believed in you!','We didn\'t coordinate...','Sorry...'],['COMBINATION!','Best duo!','We were all over the place...','Couldn\'t get in sync...'],['Perfect harmony!','No words needed!','Total misfire...','We were never on the same page...'],['The power of sync!','Our bond!','If only we\'d synced...','Next time we WILL!'],['Duo power!','Partner!','Don\'t break up with me, ok?','I won\'t! ...probably'],['Telepathy activated!','We were connected!','Couldn\'t read \'em...','That wall was too thick...'],['Godlike teamwork!','Are we geniuses?','I want THAT teamwork...','Let\'s practice...'],['Completely in sync!','Best partner ever!','I\'m jealous...','SO frustrating...'],['That was CLOSE!','I\'m sweating...','One more move...','So close...'],['Won by a HAIR!','My heart can\'t take this!','Paper thin margin...','If only...'],['That last move!','My heart was POUNDING!','That one move...','RIGHT there...'],['Barely made it!','I\'m exhausted...','So close...','Just a little more...'],['I was so NERVOUS!','I thought it was over...','We had \'em cornered...','Just barely...'],['By the skin of our teeth!','I aged ten years','SO close...','How did that happen...'],['Somehow...!','It\'s a miracle','Lost to a miracle...','That\'s not fair...'],['One move difference!','If we\'d overlapped...','If that overlap hadn\'t happened...','UGH!'],['What a battle...','Instant classic!','Classic match but I LOST','Next time I win'],['Down to the wire!','We both went all out','Gave it everything...','SO CLOSE!'],['Overwhelming!','A work of art','Helpless...','Nothing we could do...'],['PERFECT!','Beautiful...','A beautiful defeat...','Can\'t even argue'],['Textbook victory','A masterclass','Got textbooked...','Well, I learned something...'],['Took ALL the corners!','Strategic W!','Didn\'t get a single corner...','Not one...'],['Board domination!','Our color everywhere!','It\'s all their color...','Painted the whole board...'],['Unstoppable!','No one can stop us!','Couldn\'t stop \'em...','Way too strong...'],['Perfect game!','Zero mistakes!','Mistake city...','So much to work on...'],['On another level','Different league','Felt the gap...','Need more practice...'],['One-sided!','Sorry... a little','It was a disaster...','Outclassed...'],['Blowout!','Too fast?','Couldn\'t keep up...','Left in the dust...'],['COMEBACK!!','Never gave up!','Got reverse-swept...','Let our guard down...'],['Last ones laughing!','That\'s US!','At the very end...','I can\'t believe it...'],['Plot twist!','What a story!','We\'re the plot victims...','No way...'],['Outlasted \'em!','We hung in there!','They wouldn\'t go down...','Couldn\'t close it out...'],['From behind... to AHEAD!','Wow... self-narrating much?','We were so far ahead...','Couldn\'t hold the lead...'],['Miracle comeback!','It was destiny!','Destiny is cruel...','Brutal...'],['Second-half surge!','Hit another gear!','Our lead just...','Evaporated...'],['From the brink!','Survived!','We let \'em live...','Should\'ve finished it...'],['Like a phoenix!','REBORN!','Couldn\'t put \'em down...','Missed our chance...'],['EPIC COMEBACK!','Like a movie!','We\'re the movie villains...','Bad casting...'],['No overlaps, no problems!','We learned!','Too many overlaps...','Lesson learned...'],['Overlap-dodge pros!','Big brain!','Our reads were off...','Kept picking the same spot...'],['Spread strat wins!','Maximum efficiency!','So inefficient...','What a waste...'],['Zero waste!','Every stone counted','So much waste...','Our accuracy was awful...'],['Zero overlaps!','A miracle!','We overlapped SO much...','How many times was that?'],['Luck is a skill!','Probably','Outplayed fair and square','I accept my fate...'],['I won because my partner\'s a genius','No, YOU!','We lost because...','HEY!'],['All according to plan!','Wait, we had a plan?','They had a plan...','We should get one...'],['Did you see CPU go hard?','I wasn\'t even trying','CPU too strong...','Nerf pls...'],['I might be good at this','Don\'t get cocky','I might be bad at this...','Might be...'],['Hehehe~','Wipe that smirk off','That smirk is INFURIATING...','Ugh...'],['Too easy','LIAR you were panicking','They make it look easy...','I\'ll make \'em sweat next time!'],['Must be talent','Bit much, don\'t you think?','Is it a talent gap...','NEVER!'],['It\'s all RNG!','Uh, pretty sure it\'s skill?','Just bad luck...','Yeah... right...?'],['Thanks for the meal!','Yum','We got eaten alive...','Digested...'],['Great game!','It really was!','Thanks...','Good experience'],['Let\'s go again!','Absolutely!','Painful but... fun','One more!'],['You were tough!','Right back at ya!','Nice of you to say...','That helps a bit...'],['Well fought!','Gave it our all!','Lost giving our all...','A clean loss'],['Play again soon!','Anytime!','I want a rematch!','Bring it!'],['What a match!','Best game yet!','Best game but I lost...','Mixed feelings...'],['Thanks for playing!','Likewise!','Likewise...','It was fun...'],['You\'ve leveled up!','Really? Aw shucks','Lost but I grew','I\'ll use this next time!'],['Evenly matched!','Could\'ve gone either way','Losing by a hair hurts the MOST','I know right...'],['Respect!','Mutual!','Respect, but SO frustrated','Honestly!'],['Great corner play','That was the turning point!','Losing the corners was...','Fatal...'],['Controlled the edges!','Edge strategy!','Stuck in the middle...','Couldn\'t expand...'],['Early moves paid off','Playing the long game!','Fell behind early...','Didn\'t see it coming...'],['Outplayed \'em!','Mind games!','We got read...','They saw right through us...'],['Rock-solid defense!','Fortress!','Couldn\'t break through...','That defense was insane...'],['Aggression wins!','Best defense is offense!','Under constant pressure...','Played too passive...'],['Well-balanced game','Offense AND defense!','Lost our balance...','Got lopsided...'],['Efficient with fewer moves!','Quality over quantity!','Couldn\'t muscle through...','Should\'ve been smarter...'],['Endgame clutch!','Clutch when it counts!','Weak endgame...','Gotta work on that...'],['Read the whole board!','Wide vision!','Tunnel vision...','Could only see what\'s in front...'],['HERE IT IS!','It\'s happening!','There they go...','Can\'t stop \'em...'],['WOOHOO!','HYPE LEVEL MAX!','Mood: destroyed...','Sadge...'],['FIST PUMP!','YESSS!','Crushed...','Shoulders dropping...'],['EUPHORIA!','JUMPING FOR JOY!','On my knees...','Can\'t stand up...'],['Best feeling EVER!','SO HAPPY!','Feeling blue...','Sinking...'],['CHILLS!','I\'m emotional!','A moving defeat...','Gonna cry...'],['Victory lap!','Running circles!','Legs are heavy...','Can\'t move...'],['MVP!','No, YOU\'RE MVP!','Hate to say it but... MVP...','They were incredible...'],['Legendary match!','We\'ll tell this story forever!','A legendary loss...','One for the history books...'],['CHAMPIONS!','Title defended!','Dethroned...','Back to challenger...']];
+const END_CLOSE_EN=[['That was WAY too close!','Barely...!','ONE more piece...!','So painfully close...'],['By a THREAD!','My heart almost stopped...','We almost had it...','The frustration...'],['I\'m drenched in sweat...','I aged ten years','Paper thin...!','Just barely...'],['One move difference!','I thought it was over...','That ONE move...!','Nnngh...'],['Barely scraped by...!','I can breathe again...','AAARGH!','One more round!'],['That was INTENSE!','Instant classic','Classic game and I\'m CRYING','Best of three?'],['By the skin of our teeth!','Survived...','So close and yet...','Ugh...'],['Razor-thin finish!','I\'m shaking...','By THAT much...','The regret...'],['My heart can\'t take this!','I need a break...','One more turn and...','What-ifs...'],['Never again...','Wait, already done?','Let me try ONE more time!','This time for SURE!']];
+// LANG切替ヘルパー
+function LD(){return LANG==='en'?D_LINES_EN:D_LINES;}
+function LN(){return LANG==='en'?N_LINES_EN:N_LINES;}
+function LCO(){return LANG==='en'?COOP_LINES_EN:COOP_LINES;}
+function LCS(){return LANG==='en'?COOP_SUCCESS_EN:COOP_SUCCESS;}
+function LCF(){return LANG==='en'?COOP_FAIL_EN:COOP_FAIL;}
+function LSI(){return LANG==='en'?SIT_LINES_EN:SIT_LINES;}
+function LEN(){return LANG==='en'?END_LINES_EN:END_LINES;}
+function LEC(){return LANG==='en'?END_CLOSE_EN:END_CLOSE;}
+
+// ユーティリティ
+function rrect(x,y,w,h,r){x.beginPath();x.moveTo(y+r,w);x.lineTo(y+h-r,w);x.quadraticCurveTo(y+h,w,y+h,w+r);x.lineTo(y+h,w+r-r);/* ... */}
+// ↑ 上のrrectは壊れてるので正しく書き直す:
+function rr(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();}
+function tt(ctx,t,x,y,f,c,a='center',b='middle'){ctx.font=f;ctx.fillStyle=c;ctx.textAlign=a;ctx.textBaseline=b;ctx.fillText(t,x,y);}
+function hit(tx,ty,x,y,w,h){return tx>=x&&tx<=x+w&&ty>=y&&ty<=y+h;}
+function eo(t){return 1-Math.pow(1-t,3);}
+// 溜めて→ストン着地（ease-in cubic、t=1で確実に1.0）
+function eiFly(t){return t*t*(3-2*t);} // smoothstep: ゆっくり→加速→ゆっくり着地
+// 戦況に応じた背景色を計算。ratio: 0=均衡, 正=黒優勢, 負=白優勢
+// 背景色フェード用の現在値
+const _bgCur=[42,42,46];
+let _bgLogTimer=0;
+function battleBg(bd,swap=false,final=false){
+  if(!bd){_lerpBg(C.bgN);return _bgRgb();}
+  const cn=bd.cnt();
+  const placed=cn.b+cn.w;if(!placed){_lerpBg(C.bgN);return _bgRgb();}
+  const aScore=swap?cn.w:cn.b, bScore=swap?cn.b:cn.w;
+  const winner=aScore>=bScore?'a':'b';
+  const diff=Math.abs(aScore-bScore);
+  // 最終結果: 僅差でも勝者色にバーッと染まる
+  const strength=final?1.0:Math.pow(Math.min(1,diff/15),0.6);
+  const target=winner==='a'?C.bgA:C.bgB;
+  // 引き分けはニュートラル
+  const tgt=diff===0?C.bgN:target;
+  const mix=(a,b2,t2)=>Math.round(a+(b2-a)*t2);
+  const goal=[mix(C.bgN[0],tgt[0],strength),mix(C.bgN[1],tgt[1],strength),mix(C.bgN[2],tgt[2],strength)];
+  // 最終結果はlerp速めに
+  final?_lerpBg(goal,0.12):_lerpBg(goal);
+  const now=performance.now();
+  if(now-_bgLogTimer>1000){_bgLogTimer=now;
+    console.log(`[BG] ●${cn.b} ◻${cn.e} ○${cn.w} | A:${aScore} B:${bScore} diff:${diff} str:${strength.toFixed(2)}${final?' FINAL':''} | bg:rgb(${Math.round(_bgCur[0])},${Math.round(_bgCur[1])},${Math.round(_bgCur[2])})`);}
+  return _bgRgb();
+}
+function _lerpBg(goal,sp=0.15){for(let i=0;i<3;i++)_bgCur[i]+=(goal[i]-_bgCur[i])*sp;}
+function _bgRgb(){return `rgb(${Math.round(_bgCur[0])},${Math.round(_bgCur[1])},${Math.round(_bgCur[2])})`;}
+
+function pk(a){return a[Math.floor(Math.random()*a.length)];}
+// ホバー/プレス判定ヘルパー
+function isHov(x,y,w,h){const a=window._app;return a&&hit(a.hoverX,a.hoverY,x,y,w,h);}
+function isPress(x,y,w,h){const a=window._app;return a&&a.pressing&&hit(a.hoverX,a.hoverY,x,y,w,h);}
+// インタラクティブ要素の描画ヘルパー（背景ハイライト）
+function hovFx(ctx,x,y,w,h){
+  if(isPress(x,y,w,h)){ctx.fillStyle='rgba(255,255,255,0.15)';rr(ctx,x,y,w,h,4);ctx.fill();}
+  else if(isHov(x,y,w,h)){ctx.fillStyle='rgba(255,255,255,0.08)';rr(ctx,x,y,w,h,4);ctx.fill();}
+}
+
+// レイアウト: max-width 480px でスマホ風にセンタリング
+function L(W,H){
+  // 画面の高さベースで拡大。縦が大きいほどコンテンツも大きく
+  const eW=Math.min(W*0.92, H*0.75, 900);
+  const mob=W<500;
+  const fs=Math.max(Math.min(eW*0.048, H*0.032, 32), mob?22:14);
+  return{eW,ox:(W-eW)/2,cx:W/2,fs,mob};
+}
+
+function drawBtn(ctx,label,x,y,w,h,color=C.gold,tc){
+  const maxW=500;if(w>maxW){x+=(w-maxW)/2;w=maxW;}
+  h=Math.max(h,36);
+  // ホバー/プレス効果
+  const app=window._app;
+  const hovered=app&&hit(app.hoverX,app.hoverY,x,y,w,h);
+  const pressed=hovered&&app.pressing;
+  const yOff=pressed?2:hovered?-1:0;
+  const bright=pressed?0.85:hovered?1.1:1;
+  const i=h*0.06;ctx.beginPath();ctx.moveTo(x+i+3,y+yOff);ctx.lineTo(x+w-i-3,y+yOff);ctx.lineTo(x+w,y+h+yOff);ctx.lineTo(x,y+h+yOff);ctx.closePath();
+  ctx.fillStyle=color;ctx.fill();
+  if(hovered){ctx.fillStyle=`rgba(255,255,255,${pressed?0:0.1})`;ctx.fill();}
+  ctx.strokeStyle='rgba(0,0,0,0.3)';ctx.lineWidth=1.5;ctx.stroke();
+  if(!tc)tc=(color===C.gold)?'#1a1a1a':'#f0efe8';
+  tt(ctx,label,x+w/2,y+h/2+1+yOff,`bold ${Math.floor(h*0.4)}px sans-serif`,tc);
+}
+
+// Board
+class Board{
+  constructor(){this.cells=Array.from({length:BS},()=>new Int8Array(BS));}
+  clone(){const b=new Board();for(let r=0;r<BS;r++)b.cells[r]=new Int8Array(this.cells[r]);return b;}
+  setup(n){for(let r=0;r<BS;r++)this.cells[r].fill(EMPTY);const l=n==='ランダム'?this._rnd():(LAYOUTS[n]||LAYOUTS['スタンダード']);for(const[r,c,v]of l)this.cells[r][c]=v;}
+  _rnd(){const s=[],u=new Set(),n=2+Math.floor(Math.random()*3);for(let i=0;i<n;i++){let r,c,k;do{r=1+Math.floor(Math.random()*6);c=1+Math.floor(Math.random()*6);k=r*8+c;}while(u.has(k)||u.has((7-r)*8+(7-c)));u.add(k);u.add((7-r)*8+(7-c));s.push([r,c,BLACK]);s.push([7-r,7-c,WHITE]);}return s;}
+  get(r,c){return this.cells[r][c];}
+  inB(r,c){return r>=0&&r<BS&&c>=0&&c<BS;}
+  flips(r,c,col){if(this.cells[r][c]!==EMPTY)return[];const op=col===BLACK?WHITE:BLACK,a=[];for(const[dr,dc]of DIRS){const f=[];let nr=r+dr,nc=c+dc;while(this.inB(nr,nc)&&this.cells[nr][nc]===op){f.push([nr,nc]);nr+=dr;nc+=dc;}if(f.length>0&&this.inB(nr,nc)&&this.cells[nr][nc]===col)a.push(...f);}return a;}
+  canP(r,c,col){return this.cells[r][c]===EMPTY&&this.flips(r,c,col).length>0;}
+  validM(col){const m=[];for(let r=0;r<BS;r++)for(let c=0;c<BS;c++)if(this.canP(r,c,col))m.push([r,c]);
+    this._isRescue=false;
+    if(!m.length){
+      // 自陣ゼロチェック: 自分の色の石が盤上にゼロなら、任意の石に隣接する空きマスに自由配置（角は可能な限り除外）
+      let myCount=0;for(let r=0;r<BS;r++)for(let c=0;c<BS;c++)if(this.cells[r][c]===col)myCount++;
+      const all=[],nonCorner=[];
+      for(let r=0;r<BS;r++)for(let c=0;c<BS;c++){if(this.cells[r][c]!==EMPTY)continue;
+        let adj=false;for(const[dr,dc]of DIRS){const nr=r+dr,nc=c+dc;if(this.inB(nr,nc)&&this.cells[nr][nc]!==EMPTY){adj=true;break;}}
+        if(adj){all.push([r,c]);if(!this.isCorner(r,c))nonCorner.push([r,c]);}}
+      // 角以外があればそちらを優先、なければ角も許可
+      const rescue=nonCorner.length?nonCorner:all;
+      m.push(...rescue);
+      if(m.length)this._isRescue=true;
+    }return m;}
+  // 協力候補: 単独では挟めないが、相方がどこかに置けば挟めるマス
+  coopM(col){
+    const solo=new Set(this.validM(col).map(([r,c])=>r*BS+c));
+    const coop=new Set();
+    const empties=[];
+    for(let r=0;r<BS;r++)for(let c=0;c<BS;c++)if(this.cells[r][c]===EMPTY)empties.push([r,c]);
+    // 相方が各空きマスに1石置いた場合をシミュレート
+    for(const[ar,ac]of empties){
+      const tmp=this.clone();tmp.cells[ar][ac]=col;
+      for(const[r,c]of empties){
+        if(r===ar&&c===ac)continue;
+        const key=r*BS+c;
+        if(solo.has(key)||coop.has(key))continue;
+        if(tmp.cells[r][c]===EMPTY&&tmp.flips(r,c,col).length>0)coop.add(key);
+      }
+    }
+    return[...coop].map(k=>[Math.floor(k/BS),k%BS]);
+  }
+  place(r,c,col){const f=this.flips(r,c,col);this.cells[r][c]=col;for(const[fr,fc]of f)this.cells[fr][fc]=col;return f;}
+  cnt(){let b=0,w=0,e=0;for(let r=0;r<BS;r++)for(let c=0;c<BS;c++){const v=this.cells[r][c];v===BLACK?b++:v===WHITE?w++:e++;}return{b,w,e};}
+  isCorner(r,c){return(r===0||r===7)&&(c===0||c===7);}
+  // 重み付きスコア
+  wScore(){let bs=0,ws=0;for(let r=0;r<BS;r++)for(let c=0;c<BS;c++){const v=this.cells[r][c];if(!v)continue;let wt=1;const edge=r===0||r===7||c===0||c===7;const corner=(r===0||r===7)&&(c===0||c===7);if(corner)wt=5;else if(edge)wt=2;v===BLACK?bs+=wt:ws+=wt;}return{bs,ws};}
+}
+
+// CPU
+class CPU{static pick(bd,col,m,pi=0){if(!m.length)return null;const p=CPERS[pi%CPERS.length];let best=-1e9,bm=[];for(const[r,c]of m){const f=bd.flips(r,c,col);let s=CPUW[r][c]*p.c+f.length*p.f+(Math.random()*p.r*2-p.r);if(s>best){best=s;bm=[[r,c]];}else if(Math.abs(s-best)<1.5)bm.push([r,c]);}return bm[Math.floor(Math.random()*bm.length)];}}
+
+// Renderer
+class R{
+  constructor(ctx){this.ctx=ctx;this._splatDisp={rb:0,rw:0};}
+  board(bd,ox,oy,cs,o={}){
+    const ctx=this.ctx,sz=cs*BS;
+    ctx.fillStyle=C.boardBg;ctx.fillRect(ox,oy,sz,sz);
+    ctx.strokeStyle=C.grid;ctx.lineWidth=1;
+    for(let i=0;i<=BS;i++){ctx.beginPath();ctx.moveTo(ox+i*cs,oy);ctx.lineTo(ox+i*cs,oy+sz);ctx.stroke();ctx.beginPath();ctx.moveTo(ox,oy+i*cs);ctx.lineTo(ox+sz,oy+i*cs);ctx.stroke();}
+    ctx.fillStyle=C.grid;for(const[r,c]of[[2,2],[2,6],[6,2],[6,6]]){ctx.beginPath();ctx.arc(ox+c*cs,oy+r*cs,3,0,Math.PI*2);ctx.fill();}
+    // 合法手: 明滅ドット（大きめ・濃いめ）
+    if(o.vm){const t=performance.now()/300;const pulse=0.5+0.3*Math.sin(t);const baseSz=cs*0.18+cs*0.05*Math.sin(t*1.33);
+      const app=window._app;const hr=app?Math.floor((app.hoverY-oy)/cs):-1;const hc=app?Math.floor((app.hoverX-ox)/cs):-1;
+      const selR=o.sel?o.sel[0]:-1,selC=o.sel?o.sel[1]:-1;
+      for(const[r,c]of o.vm){
+        if(r===selR&&c===selC)continue;
+        const cx2=ox+c*cs+cs/2,cy2=oy+r*cs+cs/2;
+        const hovered=r===hr&&c===hc;const sz=hovered?cs*0.28:baseSz;const al=hovered?0.85:pulse;
+        ctx.beginPath();ctx.arc(cx2,cy2,sz,0,Math.PI*2);ctx.fillStyle=`rgba(212,168,67,${al})`;ctx.fill();
+        if(hovered){ctx.strokeStyle='rgba(212,168,67,0.6)';ctx.lineWidth=2;ctx.stroke();}}}
+    // 協力候補: 確定より少し小さめのドット＋リング（区別しやすく）
+    if(o.coopM){const t2=performance.now()/300;const pulse2=0.35+0.2*Math.sin(t2);const sz2=cs*0.12+cs*0.03*Math.sin(t2*1.33);
+      const app2=window._app;const hr2=app2?Math.floor((app2.hoverY-oy)/cs):-1;const hc2=app2?Math.floor((app2.hoverX-ox)/cs):-1;
+      const selR2=o.sel?o.sel[0]:-1,selC2=o.sel?o.sel[1]:-1;
+      for(const[r,c]of o.coopM){if(r===selR2&&c===selC2)continue;
+        const cx2=ox+c*cs+cs/2,cy2=oy+r*cs+cs/2;
+        const hov2=r===hr2&&c===hc2;const sz3=hov2?cs*0.22:sz2;
+        ctx.beginPath();ctx.arc(cx2,cy2,sz3,0,Math.PI*2);ctx.fillStyle=`rgba(212,168,67,${hov2?0.6:pulse2})`;ctx.fill();
+        // リング（協力マーク）
+        ctx.beginPath();ctx.arc(cx2,cy2,sz3+cs*0.04,0,Math.PI*2);ctx.strokeStyle=`rgba(212,168,67,${pulse2})`;ctx.lineWidth=1.5;ctx.setLineDash([3,3]);ctx.stroke();ctx.setLineDash([]);
+      }}
+    if(o.sel){const[r,c]=o.sel;ctx.fillStyle=C.sel;ctx.fillRect(ox+c*cs+1,oy+r*cs+1,cs-2,cs-2);}
+    // 反転プレビュー: ひっくり返る石を薄くハイライト
+    if(o.flipPreview)for(const[r,c]of o.flipPreview){ctx.fillStyle='rgba(212,168,67,0.25)';ctx.fillRect(ox+c*cs+1,oy+r*cs+1,cs-2,cs-2);}
+    if(o.reveal){const now=performance.now();for(const{cell,icon}of o.reveal){const[r,c]=cell;const p=0.3+0.2*Math.sin(now/150);ctx.fillStyle=`rgba(212,168,67,${p})`;ctx.fillRect(ox+c*cs+1,oy+r*cs+1,cs-2,cs-2);tt(ctx,icon,ox+c*cs+cs/2,oy+r*cs+cs/2,`${cs*0.5}px sans-serif`,'rgba(255,255,255,0.9)');}}
+    // ハイライト（リプレイ用）: 新規配置=金枠、ひっくり返り=薄い金背景
+    if(o.flipCells)for(const[r,c]of o.flipCells){ctx.fillStyle='rgba(212,168,67,0.2)';ctx.fillRect(ox+c*cs+1,oy+r*cs+1,cs-2,cs-2);}
+    if(o.hlCells)for(const[r,c]of o.hlCells){ctx.strokeStyle=C.gold;ctx.lineWidth=2.5;ctx.strokeRect(ox+c*cs+2,oy+r*cs+2,cs-4,cs-4);}
+    const m=cs*0.08,sr=(cs-m*2)/2;
+    for(let r=0;r<BS;r++)for(let c=0;c<BS;c++){const v=bd.get(r,c);if(!v)continue;if(o.ac&&o.ac.some(a=>a[0]===r&&a[1]===c))continue;this.stone(ox+c*cs+cs/2,oy+r*cs+cs/2,sr,v);}
+    if(o.anims)for(const a of o.anims)this.aStone(a,ox,oy,cs,sr);
+  }
+  stone(cx,cy,r,col,sx=1){
+    const ctx=this.ctx;ctx.save();ctx.translate(cx,cy);ctx.scale(sx,1);
+    ctx.beginPath();ctx.ellipse(0,r*0.12,r*0.85,r*0.18,0,0,Math.PI*2);ctx.fillStyle='rgba(0,0,0,0.18)';ctx.fill();
+    ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);
+    const g=ctx.createRadialGradient(0,0,r*0.7,0,0,r);
+    if(col===BLACK){g.addColorStop(0,'#333');g.addColorStop(1,'#222');}
+    else{g.addColorStop(0,'#f2f1ea');g.addColorStop(1,'#e0dfda');}
+    ctx.fillStyle=g;ctx.fill();ctx.strokeStyle=col===BLACK?C.bEdge:C.wEdge;ctx.lineWidth=1.2;ctx.stroke();
+    ctx.beginPath();ctx.ellipse(0,-r*0.25,r*0.6,r*0.15,0,0,Math.PI*2);ctx.fillStyle=col===BLACK?'rgba(255,255,255,0.07)':'rgba(255,255,255,0.35)';ctx.fill();
+    ctx.restore();
+  }
+  aStone(a,ox,oy,cs,sr){
+    const cx=ox+a.c*cs+cs/2,cy=oy+a.r*cs+cs/2;
+    if(a.type==='place')this.stone(cx,cy,sr*eo(a.progress),a.color);
+    else if(a.type==='miss'){
+      // 悲しげなフェードアウト: 石が現れて→しゅんと小さくなって→ふわっと上に消える
+      const p=a.progress;
+      if(p<0.25){
+        const s=eo(p/0.25);this.ctx.globalAlpha=0.6;this.stone(cx,cy,sr*s,a.color||BLACK);this.ctx.globalAlpha=1;
+      }else{
+        const fade=1-(p-0.25)/0.75;
+        const shrink=1-Math.pow((p-0.25)/0.75,0.5)*0.6;
+        this.ctx.globalAlpha=fade*0.5;
+        this.stone(cx,cy,sr*shrink,a.color||BLACK);
+        this.ctx.globalAlpha=fade*0.8;
+        tt(this.ctx,'…',cx,cy-sr*shrink-cs*0.1,`${cs*0.4}px sans-serif`,`rgba(200,200,200,${fade})`);
+        this.ctx.globalAlpha=1;
+      }
+    }
+    else{const p=a.progress;let sx,col;if(p<0.5){sx=1-p*2;col=a.from;}else{sx=(p-0.5)*2;col=a.to;}this.stone(cx,cy,sr,col,Math.max(0.02,sx));}
+  }
+  // swap: trueの場合、左=白(チームA)、右=黒(チームB)
+  splatBar(x,y,w,h,bd,final=false,swap=false){
+    const ctx=this.ctx;const cnt=bd?bd.cnt():{b:0,w:0,e:64};
+    const total=BS*BS;
+    // swap考慮: 左=チームA、右=チームB
+    const leftCol=swap?C.barW:C.barB, rightCol=swap?C.barB:C.barW;
+    const leftPct=swap?cnt.w/total:cnt.b/total, rightPct=swap?cnt.b/total:cnt.w/total;
+    const leftNum=swap?cnt.w:cnt.b, rightNum=swap?cnt.b:cnt.w;
+
+    let dleft,dright;
+    if(final){
+      dleft=leftPct;dright=rightPct;
+      // 勝者色で枠を包む（チームA多い→tA, チームB多い→tB）
+      const winner=leftNum>rightNum?'a':rightNum>leftNum?'b':null;
+      const borderCol=winner==='a'?C.tA:winner==='b'?C.tB:C.gold;
+      rr(ctx,x-2,y-2,w+4,h+4,h/2+2);ctx.strokeStyle=borderCol;ctx.lineWidth=3;ctx.stroke();
+    }else{
+      const sp=0.08;
+      this._splatDisp.rb+=(leftPct-this._splatDisp.rb)*sp;
+      this._splatDisp.rw+=(rightPct-this._splatDisp.rw)*sp;
+      dleft=this._splatDisp.rb;dright=this._splatDisp.rw;
+    }
+
+    rr(ctx,x,y,w,h,h/2);ctx.fillStyle='#5a5a5a';ctx.fill();
+    ctx.save();rr(ctx,x,y,w,h,h/2);ctx.clip();
+    if(final){
+      ctx.fillStyle=leftCol;ctx.fillRect(x,y,w*dleft,h);
+      ctx.fillStyle=rightCol;ctx.fillRect(x+w*(1-dright),y,w*dright,h);
+    }else{
+      // 波形のみで描画。残りマスが減ると波が収まる（0で直線）
+      const now2=performance.now()*0.001;
+      const amp=Math.min(1,cnt.e/10); // 残り10マス以下で収束開始、0で直線
+      const waveL=(i)=>(Math.sin(i/h*Math.PI*2.5+now2)*5+Math.sin(i/h*Math.PI*1.3+now2*1.7)*3)*amp;
+      const waveR=(i)=>(Math.sin(i/h*Math.PI*2.0+now2*0.8+2)*4+Math.sin(i/h*Math.PI*1.6+now2*1.3+5)*3)*amp;
+      if(dleft>0.01){const mx=x+w*dleft;
+        ctx.beginPath();ctx.moveTo(x,y);
+        for(let i=0;i<=h;i++)ctx.lineTo(mx+waveL(i),y+i);
+        ctx.lineTo(x,y+h);ctx.closePath();ctx.fillStyle=leftCol;ctx.fill();}
+      if(dright>0.01){const mx=x+w*(1-dright);
+        ctx.beginPath();ctx.moveTo(x+w,y);
+        for(let i=0;i<=h;i++)ctx.lineTo(mx+waveR(i),y+i);
+        ctx.lineTo(x+w,y+h);ctx.closePath();ctx.fillStyle=rightCol;ctx.fill();}
+    }
+    ctx.restore();
+    if(!final){rr(ctx,x,y,w,h,h/2);ctx.strokeStyle='rgba(255,255,255,0.2)';ctx.lineWidth=1;ctx.stroke();}
+    const fs=h*0.55;
+    tt(ctx,`${Math.round(leftPct*100)}%`,x+8,y+h/2,`bold ${fs}px sans-serif`,C.tA,'left');
+    tt(ctx,`${Math.round(rightPct*100)}%`,x+w-8,y+h/2,`bold ${fs}px sans-serif`,C.tB,'right');
+    tt(ctx,`${leftNum}`,x-fs*0.3,y+h/2,`bold ${h*0.7}px sans-serif`,C.gold,'right');
+    tt(ctx,`${rightNum}`,x+w+fs*0.3,y+h/2,`bold ${h*0.7}px sans-serif`,C.gold,'left');
+  }
+  mini(layout,x,y,sz){const ctx=this.ctx,cs=sz/BS;rr(ctx,x-2,y-2,sz+4,sz+4,3);ctx.fillStyle=C.boardBg;ctx.fill();ctx.strokeStyle=C.grid;ctx.lineWidth=0.5;for(let i=0;i<=BS;i++){ctx.beginPath();ctx.moveTo(x+i*cs,y);ctx.lineTo(x+i*cs,y+sz);ctx.stroke();ctx.beginPath();ctx.moveTo(x,y+i*cs);ctx.lineTo(x+sz,y+i*cs);ctx.stroke();}if(!layout)return;for(const[r,c,v]of layout){ctx.beginPath();ctx.arc(x+c*cs+cs/2,y+r*cs+cs/2,cs*0.35,0,Math.PI*2);ctx.fillStyle=v===BLACK?C.black:C.white;ctx.fill();}}
+}
+
+// TurnManager（フェーズ管理）
+const PH={ST:'ST',TA:'TA',PR:'PR',PS:'PS',PC:'PC',HO:'HO',RV:'RV',AN:'AN',TE:'TE',GO:'GO',PA:'PA'};
+
+class TM{
+  constructor(ps,bd,spd=1,swap=false){
+    this.ps=ps;this.bd=bd;this.spd=spd;this.swap=swap;this.ti=swap?1:0;this.pi=0;this.phase=PH.ST;
+    this.p1=null;this.p2=null;this.vm=[];this.vmS=null;this.coopS=[];this.bS=null;
+    this.cP=0;this.anims=[];this.animT=0;this.revT=0;
+    this.msg='';this.sub='';this.bMsg='';this.bSub='';this.showB=true;this.sel=null;this.rev=null;this.dup=false;this.dupC=null;
+    this.log=[];this.hist=[];this.bds=[];this.bubs=[];this.at=null;this.lastLine=null;
+    this._usedD=new Set();this._usedN=new Set(); // セリフ重複防止用
+    const c=bd.cnt();this.hist.push({b:c.b,w:c.w,e:c.e,ev:'開始',flips:0});this.bds.push(bd.clone());
+    // 開始演出
+    this.msg=T('gameStart');this.sub='';this.startMsg=true;
+    this.auto(1000);
+  }
+  get team(){return this.ti===0?'A':'B';}
+  get tCol(){const base=this.ti===0?BLACK:WHITE;return this.swap?(base===BLACK?WHITE:BLACK):base;}
+  get tPs(){return this.ps.filter(p=>p.team===this.team);}
+  // チーム別スコア（swap考慮）: A=先攻チームの石数, B=後攻チームの石数
+  teamCnt(){const cn=this.bd.cnt();return this.swap?{a:cn.w,b:cn.b,e:cn.e}:{a:cn.b,b:cn.w,e:cn.e};}
+  get cp(){return this.tPs[this.pi];}
+  get allCPU(){return this.ps.every(p=>p.isCPU);}
+  get turnNum(){return this.log.length;}
+
+  auto(ms){if(this.at)clearTimeout(this.at);this.at=setTimeout(()=>this.tap(0,0,false),ms/this.spd);}
+
+  startTurn(){
+    this.bMsg='';this.bSub='';this.dupC=null;
+    this.vm=this.bd.validM(this.tCol);this.isRescue=this.bd._isRescue||false;
+    if(!this.vm.length){this.cP++;if(this.cP>=2||this.bd.cnt().e===0){this.goGameOver();return;}
+      this.phase=PH.PA;this.msg=T('pass');this.sub='';this.showB=true;this.auto(this.spd>=8?80:600);return;}
+    this.cP=0;this.bS=this.bd.clone();this.vmS=[...this.vm];
+    this.coopS=this.bd.coopM(this.tCol); // 協力候補
+    this.p1=null;this.p2=null;this.pi=0;this.sel=null;this.rev=null;this.dup=false;
+    // チーム内2人が両方CPUなら、選択過程を飛ばして即リビール
+    const tp=this.tPs;
+    if(tp[0]?.isCPU&&tp[1]?.isCPU){
+      this._cpuInstantPick();
+      return;
+    }
+    if(this.allCPU){this.phase=PH.TA;this.msg='';this.showB=true;this.auto(300);}
+    else{this.toReady();}
+  }
+
+  tap(r,c,isB){
+    switch(this.phase){
+      case PH.ST:this.startMsg=false;this.startTurn();break;
+      case PH.TA:this.toReady();break;
+      case PH.PR:if(this.cp?.isCPU)this.cpuPick();else{this.phase=PH.PS;this.msg=T('playOf',{name:this.cp.name});this.sub='';this.showB=true;}break;
+      case PH.PS:if(!isB)return;{const allValid=[...this.vmS,...this.coopS];if(allValid.some(([vr,vc])=>vr===r&&vc===c)){this.sel=[r,c];this.phase=PH.PC;this.msg=T('confirmQ');this.sub=this.coopS.some(([vr,vc])=>vr===r&&vc===c)?T('coopWarn'):'';}}break;
+      case PH.PC:if(isB){const allValid=[...this.vmS,...this.coopS];if(allValid.some(([vr,vc])=>vr===r&&vc===c)){this.sel=[r,c];this.sub=this.coopS.some(([vr,vc])=>vr===r&&vc===c)?T('coopWarn'):'';}}break;
+      case PH.HO:{const cp2=this.cp;if(cp2){this.phase=PH.PS;this.msg=`${cp2.icon} ${cp2.name} 打って！`;this.sub='';this.showB=true;}break;}
+      case PH.TE:this.nextTeam();break;
+      case PH.PA:this.nextTeam();break;
+    }
+  }
+  toReady(){const cp=this.cp;if(!cp)return;
+    if(cp.isCPU){this.phase=PH.PR;this.msg=T('iThinkingOf',{icon:cp.icon,name:cp.name});this.showB=true;setTimeout(()=>this.cpuPick(),(200+Math.random()*300)/this.spd);}
+    else if(this.pi===0){
+      this.phase=PH.PS;this.msg=T('iPlayOf',{icon:cp.icon,name:cp.name});this.sub='';this.showB=true;
+    }else{
+      // 2人目: 同チーム内に人間2人の時だけ渡し画面、それ以外はスキップ
+      const tp=this.tPs;const humanInTeam=tp.filter(p=>!p.isCPU).length;
+      if(humanInTeam>=2){
+        this.phase=PH.HO;this.msg='';this.sub='';this.showB=false;
+      }else{
+        this.phase=PH.PS;this.msg=T('iPlayOf',{icon:cp.icon,name:cp.name});this.sub='';this.showB=true;
+      }
+    }}
+  // チーム内2人が両方CPUの場合: まとめて1回の演出
+  _cpuInstantPick(){
+    this.showB=true;
+    const tp=this.tPs;
+    // 裏で即座に2人分pick
+    this.pi=0;
+    const pi1=this.ti*2;
+    this.p1=CPU.pick(this.bS,this.tCol,this._cpuPool(pi1),pi1);
+    this._p1Coop=this._coopBet;
+    this.pi=1;
+    const pi2b=this.ti*2+1;
+    this.p2=CPU.pick(this.bS,this.tCol,this._cpuPool(pi2b),pi2b);
+    this._p2Coop=this._coopBet;
+    // 「考え中...」演出 → 短いウェイト後にリビール（x8はウェイトゼロ）
+    this.phase=PH.PR;
+    this.msg=T('teamThinking',{i1:tp[0].icon,i2:tp[1].icon});this.sub='';
+    const thinkTime=this.spd>=8?0:Math.max(300,(800+Math.random()*400)/this.spd);
+    if(thinkTime===0){this.doReveal();return;}
+    setTimeout(()=>{
+      this.msg=T('teamDecided',{i1:tp[0].icon,i2:tp[1].icon});
+      setTimeout(()=>this.doReveal(),Math.max(100,300/this.spd));
+    },thinkTime);
+  }
+  // CPU用のプール選択（協力候補の判定を含む）
+  _cpuPool(pi2){
+    let pool=this.vmS;this._coopBet=false;
+    if(this.coopS&&this.coopS.length>0){
+      const pers=CPERS[pi2%CPERS.length];
+      const tc=this.teamCnt();const myScore=this.ti===0?tc.a:tc.b;const oppScore=this.ti===0?tc.b:tc.a;
+      const losing=oppScore-myScore>8;const desperate=oppScore-myScore>15;const late=tc.e<20;
+      let coopChance=0;
+      if(pers.r>=10) coopChance=0.15;
+      else if(pers.r>=5) coopChance=0.05;
+      if(losing) coopChance+=0.15;
+      if(desperate) coopChance+=0.25;
+      if(late&&losing) coopChance+=0.2;
+      if(Math.random()<coopChance){pool=[...this.vmS,...this.coopS];this._coopBet=true;}
+    }
+    return pool;
+  }
+  cpuPick(){const pi2=this.ti*2+this.pi;
+    const pool=this._cpuPool(pi2);
+    const mv=CPU.pick(this.bS,this.tCol,pool,pi2);
+    if(this.pi===0){this.p1=mv;this._p1Coop=this._coopBet;this.pi=1;const np=this.tPs[1];if(np.isCPU){this.msg=T('thinkingOf',{name:np.name});setTimeout(()=>this.cpuPick(),(200+Math.random()*300)/this.spd);}
+      else{
+        // CPU→人間: 渡し画面不要（1人目がCPUなので見せる必要なし）
+        this.phase=PH.PS;this.msg=T('iPlayOf',{icon:np.icon,name:np.name});this.sub='';this.showB=true;
+      }}
+    else{this.p2=mv;this._p2Coop=this._coopBet;this.doReveal();}}
+  confirm(){if(this.pi===0){this.p1=this.sel;this.sel=null;this.pi=1;const np=this.tPs[1];if(np.isCPU){this.msg=T('thinkingOf',{name:np.name});this.showB=true;setTimeout(()=>this.cpuPick(),(300+Math.random()*300)/this.spd);}
+      else{
+        // 人間→人間: チーム内人間2人の時だけ渡し画面
+        const humanInTeam=this.tPs.filter(p=>!p.isCPU).length;
+        if(humanInTeam>=2){this.phase=PH.HO;this.msg='';this.sub='';this.showB=false;}
+        else{this.phase=PH.PS;this.msg=T('iPlayOf',{icon:np.icon,name:np.name});this.sub='';this.showB=true;}
+      }}
+    else{this.p2=this.sel;this.sel=null;this.doReveal();}}
+  cancel(){this.sel=null;this.phase=PH.PS;this.msg=T('playOf',{name:this.cp.name});this.sub='';}
+
+  doReveal(){if(this.phase===PH.RV)return; // 二重発火防止
+    this.phase=PH.RV;this.showB=true;
+    const d=this.p1[0]===this.p2[0]&&this.p1[1]===this.p2[1];this.dup=d;
+    const tp=this.tPs;
+    this.rev=[{cell:this.p1,icon:tp[0].icon}];
+    if(!d)this.rev.push({cell:this.p2,icon:tp[1].icon});
+    this.dupC=d?{i1:tp[0].icon,i2:tp[1].icon,cell:this.p1}:null;
+    // セリフ選択（状況に応じて）
+    this.bubs=[];
+    const cpus=tp.filter(p=>p.isCPU);
+    if(cpus.length>=1){
+      let pair;
+      const tc2=this.teamCnt();const diff=tc2.a-tc2.b;const isLosing=(this.ti===0&&diff<-10)||(this.ti===1&&diff>10);
+      const isWinning=(this.ti===0&&diff>10)||(this.ti===1&&diff<-10);
+      const isLate=tc2.e<20;const isCorner=d?this.bd.isCorner(this.p1[0],this.p1[1]):false;
+      const anyCoopBet=this._p1Coop||this._p2Coop;
+      if(anyCoopBet&&cpus.length>=2)pair=pk(LCO()); // 協力候補に賭けた！
+      else if(d&&this.turnNum<=1)pair=pk(LSI().earlyDupe);
+      else if(!d&&isCorner)pair=pk(LSI().cornerGet);
+      else if(isLate&&isWinning)pair=pk(LSI().winning);
+      else if(isLate&&isLosing)pair=pk(LSI().losing);
+      else if(isLate)pair=pk(LSI().lateGame);
+      else{
+        // 重複防止: 使用済みセットから除外して選ぶ。全部使い切ったらリセット
+        const pool=d?LD():LN();
+        const used=d?this._usedD:this._usedN;
+        if(used.size>=pool.length)used.clear();
+        const avail=pool.filter((_,i)=>!used.has(i));
+        const idx=Math.floor(Math.random()*avail.length);
+        pair=avail[idx];used.add(pool.indexOf(pair));
+      }
+      this.lastLine=pair;
+      // かぶり時は衝突(700ms)の後にセリフを出す
+      const baseDelay=d?800:0;
+      if(cpus.length>=2){this.bubs=[{icon:tp[0].icon,text:pair[0],corner:this.ps.indexOf(tp[0]),delay:baseDelay},{icon:tp[1].icon,text:pair[1],corner:this.ps.indexOf(tp[1]),delay:baseDelay+300}];}
+      else{const ci=tp.indexOf(cpus[0]);this.bubs=[{icon:cpus[0].icon,text:pair[ci],corner:this.ps.indexOf(cpus[0]),delay:baseDelay}];}
+    }
+    this.bMsg=d?T('crashed'):T('opened');
+    this.bSub=d?T('crashedSub'):T('openedSub');
+    this.msg='';this.sub='';
+    // 飛行軌道のランダムパラメータ
+    this.flyCurve1=(Math.random()-0.5)*200;
+    this.flyCurve2=(Math.random()-0.5)*200;
+    // フェイント: 30%の確率で別の候補マスに向かってから急旋回
+    const vm=this.vmS||[];
+    this.flyFeint1=null;this.flyFeint2=null;
+    if(vm.length>2&&Math.random()<0.3){
+      const others1=vm.filter(([r,c])=>!(r===this.p1[0]&&c===this.p1[1]));
+      if(others1.length)this.flyFeint1=pk(others1);
+    }
+    if(!d&&vm.length>2&&Math.random()<0.3){
+      const others2=vm.filter(([r,c])=>!(r===this.p2[0]&&c===this.p2[1]));
+      if(others2.length)this.flyFeint2=pk(others2);
+    }
+    this.revT=performance.now();
+  }
+
+  execPlace(){
+    this.phase=PH.AN;this.anims=[];this.showB=true;const col=this.tCol;const now=performance.now();
+    const opp=col===BLACK?WHITE:BLACK;
+    const[r1,c1]=this.p1;
+
+    const justPlace=(r,c,delay)=>{
+      this.bd.cells[r][c]=col;
+      this.anims.push({type:'place',r,c,color:col,progress:0,startTime:now+delay});
+    };
+    // 重複防止: 既にフリップ演出が登録されたマスを記録
+    const flippedSet=new Set();
+    // 五月雨フリップ: 置いた石から近い順にディレイ（ヒットストップ150ms後に開始）
+    const cascadeFlips=(flips,pr,pc,baseDelay)=>{
+      const hitStop=150;
+      const perStone=60;
+      const sorted=[...flips].sort((a,b)=>{
+        const da=Math.abs(a[0]-pr)+Math.abs(a[1]-pc);
+        const db=Math.abs(b[0]-pr)+Math.abs(b[1]-pc);
+        return da-db;
+      });
+      let count=0;
+      for(const[fr,fc]of sorted){
+        const key=fr*BS+fc;
+        if(flippedSet.has(key))continue; // 重複スキップ
+        flippedSet.add(key);
+        this.anims.push({type:'flip',r:fr,c:fc,from:opp,to:col,progress:0,startTime:now+baseDelay+hitStop+count*perStone});
+        count++;
+      }
+      return hitStop+count*perStone+350;
+    };
+
+    if(this.dup){
+      const f=this.bd.flips(r1,c1,col);
+      if(f.length>0){
+        this.bd.place(r1,c1,col);
+        this.anims.push({type:'place',r:r1,c:c1,color:col,progress:0,startTime:now});
+        cascadeFlips(f,r1,c1,0);
+      }else if(this.vmS.some(([vr,vc])=>vr===r1&&vc===c1)){
+        justPlace(r1,c1,0);
+      }else{
+        this.anims.push({type:'miss',r:r1,c:c1,progress:0,startTime:now});
+      }
+    }else{
+      const[r2,c2]=this.p2;
+      const checkFlips=(bd,r,c,col2,otherR,otherC)=>{
+        const tmp=new Board();for(let i=0;i<BS;i++)tmp.cells[i]=new Int8Array(bd.cells[i]);
+        tmp.cells[r][c]=EMPTY;
+        tmp.cells[otherR][otherC]=col2;
+        return tmp.flips(r,c,col2);
+      };
+      const f1=checkFlips(this.bd,r1,c1,col,r2,c2);
+      const f2=checkFlips(this.bd,r2,c2,col,r1,c1);
+
+      let delay=0;
+      if(f1.length>0){
+        this.bd.place(r1,c1,col);
+        this.anims.push({type:'place',r:r1,c:c1,color:col,progress:0,startTime:now});
+        delay=cascadeFlips(f1,r1,c1,0);
+      }else if(this.vmS.some(([vr,vc])=>vr===r1&&vc===c1)){
+        justPlace(r1,c1,0);delay=400;
+      }else{
+        this.anims.push({type:'miss',r:r1,c:c1,progress:0,startTime:now});delay=400;
+      }
+      if(f2.length>0){
+        if(this.bd.cells[r2][c2]===EMPTY)this.bd.place(r2,c2,col);
+        this.anims.push({type:'place',r:r2,c:c2,color:col,progress:0,startTime:now+delay});
+        for(const[fr,fc]of f2){if(this.bd.cells[fr][fc]!==col)this.bd.cells[fr][fc]=col;}
+        cascadeFlips(f2,r2,c2,delay);
+      }else if(this.vmS.some(([vr,vc])=>vr===r2&&vc===c2)){
+        justPlace(r2,c2,delay);
+      }else{
+        this.anims.push({type:'miss',r:r2,c:c2,progress:0,startTime:now+delay});
+      }
+    }
+    this.animT=now;this.rev=null;
+    const tp=this.tPs,cn=this.bd.cnt();
+    // フリップ数を集計（flip系animの数）
+    const flipCount=this.anims.filter(a=>a.type==='flip').length;
+    let ev=tp[0]?.icon||'';if(this.dup)ev+=' かぶり';
+    // 角判定: 実際に角に石が置けた場合のみ（missは除外）
+    const col2=this.tCol;
+    const gotCorner=(this.bd.isCorner(r1,c1)&&this.bd.get(r1,c1)===col2)||(!this.dup&&this.bd.isCorner(this.p2[0],this.p2[1])&&this.bd.get(this.p2[0],this.p2[1])===col2);
+    if(gotCorner)ev+=' 🏴角';
+    this.log.push({team:this.team,p1:tp[0].name,p1c:this.p1,p2:tp[1].name,p2c:this.p2,dup:this.dup,flips:flipCount});
+    this.hist.push({b:cn.b,w:cn.w,e:cn.e,ev,flips:flipCount,team:this.team});this.bds.push(this.bd.clone());
+    // リアクションセリフ: 大量フリップ or 協力候補成功
+    const oppTeam=this.team==='A'?'B':'A';
+    const oppPs=this.ps.filter(p=>p.team===oppTeam);
+    const anyCoopSuccess=!this.dup&&(this._p1Coop||this._p2Coop)&&flipCount>0;
+    if(anyCoopSuccess){
+      const pair=pk(LSI().coopSuccess);
+      this.bubs=[{icon:tp[0].icon,text:pair[0],corner:this.ps.indexOf(tp[0])},{icon:tp[1].icon,text:pair[1],corner:this.ps.indexOf(tp[1]),delay:200}];
+      this.revT=now;
+    }else if(flipCount>=5){
+      const pair=pk(LSI().bigFlip);const vpair=pk(LSI().bigFlipVic);
+      this.bubs=[
+        {icon:tp[0].icon,text:pair[0],corner:this.ps.indexOf(tp[0])},
+        {icon:tp[1].icon,text:pair[1],corner:this.ps.indexOf(tp[1]),delay:200},
+        {icon:oppPs[0]?.icon,text:vpair[0],corner:this.ps.indexOf(oppPs[0]),delay:500},
+        {icon:oppPs[1]?.icon,text:vpair[1],corner:this.ps.indexOf(oppPs[1]),delay:700},
+      ];
+      this.revT=now;
+    }
+  }
+  updateAnim(now){if(this.phase!==PH.AN)return;let done=true;
+    for(const a of this.anims){const el=now-a.startTime;const dur=a.type==='place'?250:a.type==='miss'?900:350;a.progress=Math.min(1,Math.max(0,el/dur));if(a.progress<1)done=false;}
+    const wait=this.spd>=8?80:600/Math.max(1,this.spd);
+    if(done&&now-this.animT>wait){this.anims=[];const cn=this.bd.cnt();
+      if(cn.e===0){this.goGameOver();return;}
+      const nc=this.ti===0?WHITE:BLACK;if(!this.bd.validM(nc).length&&!this.bd.validM(this.tCol).length){this.goGameOver();return;}
+      this.phase=PH.TE;this.msg='';this.sub='';
+      this.auto(this.spd>=8?80:800);}}
+  goGameOver(){
+    this.phase=PH.GO;
+    // 勝敗セリフ: 4人それぞれに台詞を割り当て
+    const tc=this.teamCnt();const winner=tc.a>tc.b?'A':tc.b>tc.a?'B':null;
+    if(winner){
+      const diff=Math.abs(tc.a-tc.b);
+      const line=diff<=4?pk(LEC()):pk(LEN());
+      const wPs=this.ps.filter(p=>p.team===winner);
+      const lPs=this.ps.filter(p=>p.team!==winner);
+      this.bubs=[
+        {icon:wPs[0]?.icon,text:line[0],corner:this.ps.indexOf(wPs[0])},
+        {icon:wPs[1]?.icon,text:line[1],corner:this.ps.indexOf(wPs[1]),delay:300},
+        {icon:lPs[0]?.icon,text:line[2],corner:this.ps.indexOf(lPs[0]),delay:600},
+        {icon:lPs[1]?.icon,text:line[3],corner:this.ps.indexOf(lPs[1]),delay:900},
+      ];
+      this.revT=performance.now();
+    }
+  }
+  nextTeam(){this.ti=1-this.ti;this.startTurn();}
+}
+
+// §7 TitleScreen
+class TitleScreen{
+  constructor(app,prev){
+    this.app=app;this.btns=[];
+    if(prev){this.ps=prev.ps;this.li=prev.li;this.swap=prev.swap;this.spd=prev.spd;this.pA=prev.pA;this.pB=prev.pB;}
+    else{
+      // 初回: チームをランダムに選択（重複なし）
+      this.pA=Math.floor(Math.random()*PRESETS.length);
+      this.pB=Math.floor(Math.random()*(PRESETS.length-1));
+      if(this.pB>=this.pA)this.pB++;
+      this.ps=this._mk();this.li=2;this.swap=false;this.spd=1;
+    }
+    this.ren=new R(app.ctx);
+  }
+  _mk(){const a=PRESETS[this.pA],b=PRESETS[this.pB];const ni=LANG==='en'?5:3;return[{name:a[ni],team:'A',isCPU:false,icon:a[1]},{name:a[ni+1],team:'A',isCPU:true,icon:a[2]},{name:b[ni],team:'B',isCPU:true,icon:b[1]},{name:b[ni+1],team:'B',isCPU:true,icon:b[2]}];}
+  _upd(){
+    const a=PRESETS[this.pA],b=PRESETS[this.pB];const ni=LANG==='en'?5:3;
+    this.ps[0].icon=a[1];if(!this.ps[0].custom)this.ps[0].name=a[ni];
+    this.ps[1].icon=a[2];if(!this.ps[1].custom)this.ps[1].name=a[ni+1];
+    this.ps[2].icon=b[1];if(!this.ps[2].custom)this.ps[2].name=b[ni];
+    this.ps[3].icon=b[2];if(!this.ps[3].custom)this.ps[3].name=b[ni+1];
+  }
+  _resetNames(){
+    const a=PRESETS[this.pA],b=PRESETS[this.pB];
+    this.ps[0].name=a[3];this.ps[0].custom=false;
+    this.ps[1].name=a[4];this.ps[1].custom=false;
+    this.ps[2].name=b[3];this.ps[2].custom=false;
+    this.ps[3].name=b[4];this.ps[3].custom=false;
+  }
+
+  draw(ctx,W,H){
+    const lw=this.app.lastWinStone;
+    if(lw===null||lw===undefined){
+      // 初回: 白黒往復
+      const t=(Math.sin(performance.now()/2000)+1)/2;
+      const mix=(a,b,r)=>Math.round(a+(b-a)*r);
+      ctx.fillStyle=`rgb(${mix(C.bgA[0],C.bgB[0],t)},${mix(C.bgA[1],C.bgB[1],t)},${mix(C.bgA[2],C.bgB[2],t)})`;
+    }else{
+      // 2回目以降: 前回勝者の色
+      const tgt=lw===BLACK?C.bgA:C.bgB;
+      _lerpBg(tgt);ctx.fillStyle=_bgRgb();
+    }
+    ctx.fillRect(0,0,W,H);this.btns=[];
+    const{eW,ox,cx,fs}=L(W,H);
+    // テキスト色を背景の明暗に合わせてフェード
+    const lw2=this.app.lastWinStone;
+    const bgT=lw2===undefined||lw2===null?(Math.sin(performance.now()/2000)+1)/2:(_bgCur[0]+_bgCur[1]+_bgCur[2])/720;
+    const fm2=Math.round(240-(240-26)*bgT);
+    const fgMain=`rgb(${fm2},${fm2},${fm2})`;
+    const fgSub=`rgba(${fm2},${fm2},${fm2},0.5)`;
+    const ch=this._ch||0;
+    let y0=ch>0?Math.max(fs*0.3,(H-ch)/2):fs*0.5;
+    let y=y0;
+
+    tt(ctx,'Synchronized',cx,y,`bold ${fs*1.2}px sans-serif`,C.gold);y+=fs*1.5;
+    tt(ctx,'Reversi',cx,y,`bold ${fs*1.6}px sans-serif`,fgMain);y+=fs*1.5;
+    tt(ctx,T('subtitle'),cx,y,`${fs*0.55}px sans-serif`,fgSub);
+    // 言語切替ボタン（サブタイトル右）
+    const langBtnX=cx+fs*4.5,langBtnY=y-fs*0.25,langBtnW=fs*1.8,langBtnH=fs*0.6;
+    rr(ctx,langBtnX,langBtnY,langBtnW,langBtnH,4);
+    const lnH2=isHov(langBtnX,langBtnY,langBtnW,langBtnH);
+    ctx.fillStyle=lnH2?'rgba(255,255,255,0.15)':'rgba(255,255,255,0.05)';ctx.fill();
+    ctx.strokeStyle=lnH2?C.gold:fgSub;ctx.lineWidth=1;ctx.stroke();
+    tt(ctx,LANG==='ja'?'EN':'JA',langBtnX+langBtnW/2,langBtnY+langBtnH/2,`${lnH2?'bold ':''}${fs*0.5}px sans-serif`,lnH2?C.gold:fgSub);
+    this.btns.push({id:'lang',x:langBtnX,y:langBtnY,w:langBtnW,h:langBtnH});
+    y+=fs*1.5;
+
+    // 先攻/後攻: アイコン固定（左A右B）、swapで石色と先攻後攻が入れ替わる
+    const stoneR=fs*0.45;
+    const preA=PRESETS[this.pA],preB=PRESETS[this.pB];
+    const aLabel=this.swap?T('secondTurn'):T('firstTurn'), bLabel=this.swap?T('firstTurn'):T('secondTurn');
+    const aStone=this.swap?WHITE:BLACK, bStone=this.swap?BLACK:WHITE;
+    tt(ctx,aLabel,cx-fs*3.2,y+fs*0.4,`${fs*0.5}px sans-serif`,fgSub);
+    tt(ctx,preA[0],cx-fs*2.2,y+fs*0.4,`${fs*0.6}px sans-serif`,fgMain);
+    this.ren.stone(cx-fs*1.3,y+fs*0.4,stoneR,aStone);
+    const swpBx=cx-fs*1.5,swpBy=y,swpBw=fs*3,swpBh=fs*1;
+    hovFx(ctx,swpBx,swpBy,swpBw,swpBh);
+    const swH=isHov(swpBx,swpBy,swpBw,swpBh);
+    tt(ctx,'⇄',cx,y+fs*0.4,`${swH?'bold ':''}${fs*(swH?0.65:0.55)}px sans-serif`,swH?fgMain:C.gold);
+    this.ren.stone(cx+fs*1.3,y+fs*0.4,stoneR,bStone);
+    tt(ctx,preB[0],cx+fs*2.2,y+fs*0.4,`${fs*0.6}px sans-serif`,fgMain);
+    tt(ctx,bLabel,cx+fs*3.2,y+fs*0.4,`${fs*0.5}px sans-serif`,fgSub);
+    this.btns.push({id:'swap',x:swpBx,y:swpBy,w:swpBw,h:swpBh});
+    y+=fs*1.8;
+
+    // チーム設定（横並び、max-width内）
+    const gap=eW*0.04,bw=(eW-gap)/2;
+    const bxA=ox,bxB=ox+bw+gap,bh=fs*5;
+    // 石色ペアリング: A黒→赤, A白→青（swapで入れ替わる）
+    const colA=this.swap?C.tB:C.tA, bgA2=this.swap?C.tBBg:C.tABg;
+    const colB=this.swap?C.tA:C.tB, bgB2=this.swap?C.tABg:C.tBBg;
+    this._teamBox(ctx,bxA,y,bw,bh,this.pA,'A',colA,bgA2,0,fs);
+    this._teamBox(ctx,bxB,y,bw,bh,this.pB,'B',colB,bgB2,2,fs);
+    y+=bh+fs*1.2;
+
+    // 初期配置プレビュー
+    tt(ctx,T('layout'),cx,y,`${fs*0.5}px sans-serif`,fgSub);y+=fs*0.8;
+    const maxPH=H*0.13;const pSz=Math.min((eW-16)/LKEYS.length-6,fs*2.8,maxPH);
+    const tW=LKEYS.length*(pSz+6)-6;let px=cx-tW/2;
+    for(let i=0;i<LKEYS.length;i++){
+      const k=LKEYS[i],lay=k==='ランダム'?null:LAYOUTS[k];
+      if(i===this.li){rr(ctx,px-3,y-3,pSz+6,pSz+6+fs*0.8,4);ctx.fillStyle=C.hi;ctx.fill();}
+      if(!lay){rr(ctx,px-2,y-2,pSz+4,pSz+4,3);ctx.fillStyle=C.boardBg;ctx.fill();tt(ctx,'🎲',px+pSz/2,y+pSz/2,`${pSz*0.4}px sans-serif`,C.txt);}
+      else this.ren.mini(lay,px,y,pSz);
+      tt(ctx,T(k),px+pSz/2,y+pSz+fs*0.4,`${fs*0.5}px sans-serif`,i===this.li?C.gold:C.sub);
+      this.btns.push({id:`l_${i}`,x:px-3,y:y-3,w:pSz+6,h:pSz+6+fs*0.8});
+      px+=pSz+6;
+    }
+    y+=pSz+fs*1.8;
+
+    // 観戦速度
+    const sLbl=['×0.5','×1','×2','×4','×8'],sVal=[0.5,1,2,4,8];
+    const swT=Math.min(eW*0.8,fs*10),sw=swT/sVal.length,sx2=cx-swT/2;
+    tt(ctx,T('speed'),cx,y,`${fs*0.5}px sans-serif`,fgSub);y+=fs*0.7;
+    for(let i=0;i<sVal.length;i++){
+      const act=this.spd===sVal[i];
+      const sbx=sx2+i*sw+1,sby=y,sbw=sw-2,sbh=fs*0.9;
+      rr(ctx,sbx,sby,sbw,sbh,4);
+      ctx.fillStyle=act?C.gold:'rgba(255,255,255,0.08)';ctx.fill();
+      hovFx(ctx,sbx,sby,sbw,sbh);
+      tt(ctx,sLbl[i],sx2+i*sw+sw/2,y+fs*0.45,`${act?'bold ':''}${fs*0.5}px sans-serif`,act?'#1a1a1a':C.sub);
+      this.btns.push({id:`s_${i}`,x:sx2+i*sw,y:y,w:sw,h:fs*0.9});
+    }
+    y+=fs*1.8;
+
+    // スタート
+    const btnH=Math.max(fs*2,H*0.05),btnW=Math.min(eW*0.6,260);
+    const btnY=Math.min(y,H-btnH-H*0.03);
+    drawBtn(ctx,T('start'),cx-btnW/2,btnY,btnW,btnH);
+    this.btns.push({id:'go',x:cx-btnW/2,y:btnY,w:btnW,h:btnH});
+    // ❓ヘルプボタン（右上）ON/OFF状態表示
+    const tutOn=!window._tutSeen;
+    const hx=W-fs*2,hy=fs*0.3,hw=fs*1.5,hh=fs*1.2;
+    const hHov=isHov(hx,hy,hw,hh);
+    hovFx(ctx,hx,hy,hw,hh);
+    const helpCol=tutOn?(hHov?C.gold:'#e05040'):(hHov?fgMain:'rgba(128,128,128,0.4)');
+    tt(ctx,T('tutHelp'),hx+hw/2,hy+hh/2,`${hHov?'bold ':''}${fs*0.7}px sans-serif`,helpCol);
+    // ホバー中のみ説明テキスト
+    if(hHov){
+      const tipMsg=tutOn?T('tutHelpOn'):T('tutHelpOff');
+      const tipLines=tipMsg.split('\n');
+      const app=window._app;const mx=app?app.hoverX:hx;const my=app?app.hoverY:hy+hh;
+      for(let i=0;i<tipLines.length;i++){
+        tt(ctx,tipLines[i],mx,my+hh+fs*0.3+i*fs*0.55,`${fs*0.5}px sans-serif`,fgMain,'center','top');
+      }
+    }
+    this.btns.push({id:'help',x:hx,y:hy,w:hw,h:hh});
+    this._ch=btnY+btnH-y0+fs;
+  }
+
+  _teamBox(ctx,x,y,w,h,preIdx,team,color,bg,si,fs){
+    const pre=PRESETS[preIdx];
+    rr(ctx,x,y,w,h,8);ctx.fillStyle=bg;ctx.fill();ctx.strokeStyle=color;ctx.lineWidth=1.5;ctx.stroke();
+    // チームアイコン＋左右ボタン
+    const iy=y+fs*0.5;
+    const iconX=x+w/2;
+    tt(ctx,pre[0],iconX,iy,`${fs*0.85}px sans-serif`,color);
+    // ◀▶ with hover
+    const lx=iconX-fs*1.5,rx=iconX+fs*0.5,aw=fs*1,ah=fs*0.8;
+    hovFx(ctx,lx,iy-fs*0.4,aw,ah);hovFx(ctx,rx,iy-fs*0.4,aw,ah);
+    tt(ctx,'◀',iconX-fs*1,iy,`${isHov(lx,iy-fs*0.4,aw,ah)?'bold ':''}${fs*0.5}px sans-serif`,isHov(lx,iy-fs*0.4,aw,ah)?C.txt:C.gold);
+    tt(ctx,'▶',iconX+fs*1,iy,`${isHov(rx,iy-fs*0.4,aw,ah)?'bold ':''}${fs*0.5}px sans-serif`,isHov(rx,iy-fs*0.4,aw,ah)?C.txt:C.gold);
+    this.btns.push({id:`tL_${team}`,x:lx,y:iy-fs*0.4,w:aw,h:ah});
+    this.btns.push({id:`tR_${team}`,x:rx,y:iy-fs*0.4,w:aw,h:ah});
+    // プレイヤー
+    for(let i=0;i<2;i++){
+      const pi=si+i,ps=this.ps[pi];
+      const ry=y+fs*1.4+i*(fs*1.6);
+      // アイコン大きく
+      tt(ctx,ps.icon,x+fs*0.8,ry+fs*0.55,`${fs*0.8}px sans-serif`,C.txt,'left');
+      // 名前大きく
+      tt(ctx,ps.name,x+fs*2,ry+fs*0.55,`${fs*0.55}px sans-serif`,C.txt,'left');
+      this.btns.push({id:`n_${pi}`,x:x,y:ry,w:w*0.6,h:fs*1.2});
+      // CPUボタン（右端からパディング）
+      const lbl=ps.isCPU?'CPU':'人間';const tw=fs*2.4,tx=x+w-tw-fs*0.5,ty2=ry+fs*0.08,th=fs*0.95;
+      rr(ctx,tx,ty2,tw,th,5);ctx.fillStyle=ps.isCPU?'rgba(78,168,196,0.45)':'rgba(224,80,64,0.35)';ctx.fill();
+      hovFx(ctx,tx,ty2,tw,th);
+      tt(ctx,lbl,tx+tw/2,ry+fs*0.55,`bold ${fs*0.55}px sans-serif`,C.txt);
+      this.btns.push({id:`t_${pi}`,x:tx,y:ry,w:tw,h:fs*1});
+    }
+  }
+
+  handleTap(tx,ty){
+    for(const b of this.btns){if(!hit(tx,ty,b.x,b.y,b.w,b.h))continue;
+      if(b.id==='go')this.app.startGame(this.ps,LKEYS[this.li],this.swap,this.spd);
+      else if(b.id==='help'){window._tutSeen=!window._tutSeen;}
+      else if(b.id==='lang'){LANG=LANG==='ja'?'en':'ja';this._upd();}
+      else if(b.id==='swap')this.swap=!this.swap;
+      else if(b.id.startsWith('l_'))this.li=parseInt(b.id.substring(2));
+      else if(b.id.startsWith('t_')&&!b.id.startsWith('tL')&&!b.id.startsWith('tR')){const i=parseInt(b.id.substring(2));this.ps[i].isCPU=!this.ps[i].isCPU;}
+      else if(b.id.startsWith('s_')){const sVal=[0.5,1,2,4,8];this.spd=sVal[parseInt(b.id.substring(2))];}
+      else if(b.id==='tL_A'){this.pA=this._nextPre(this.pA,-1,this.pB);this._upd();}
+      else if(b.id==='tR_A'){this.pA=this._nextPre(this.pA,1,this.pB);this._upd();}
+      else if(b.id==='tL_B'){this.pB=this._nextPre(this.pB,-1,this.pA);this._upd();}
+      else if(b.id==='tR_B'){this.pB=this._nextPre(this.pB,1,this.pA);this._upd();}
+      else if(b.id.startsWith('n_')){const i=parseInt(b.id.substring(2));const def=i<2?PRESETS[this.pA][3+i]:PRESETS[this.pB][3+i-2];const n=prompt(`${this.ps[i].icon} の名前:\n（空欄でデフォルト「${def}」に戻す）`,this.ps[i].name);if(n===null){}else if(!n.trim()){this.ps[i].name=def;this.ps[i].custom=false;}else{this.ps[i].name=n.trim();this.ps[i].custom=true;}}
+      return;
+    }
+  }
+  // 相手プリセットをスキップして循環
+  _nextPre(cur,dir,other){let n=(cur+dir+PRESETS.length)%PRESETS.length;while(n===other)n=(n+dir+PRESETS.length)%PRESETS.length;return n;}
+}
+
+// §8 GameScreen — 麻雀式4隅プレイヤーUI
+class GameScreen{
+  constructor(app,ps,layout,spd,swap=false){
+    this.app=app;this.ren=new R(app.ctx);this.bd=new Board();this.bd.setup(layout);
+    this.tm=new TM(ps,this.bd,spd,swap);this.btns=[];this.ox=0;this.oy=0;this.cs=0;this.shakeT=0;this.vicT=0;
+    // チュートリアル（初回のみ）
+    this.tut={show:!window._tutSeen,msg:null,t:0,intro:false,playShown:false,coopSeen:false,dupSeen:false,rescueSeen:false,spots:null};
+    // 初回チュートリアル: ゲーム開始前に即座にセット
+    if(this.tut.show){this.tut.msg='tut1';this.tut.t=performance.now();this.tut.intro=true;}
+    // 4隅プレイヤー位置キャッシュ
+    this.pPos=[]; // [{x,y,w,h}] for each player
+    // 石飛行アニメ
+    this.flyAnims=[];
+  }
+
+  // プレイヤーの4隅位置を計算
+  _calcPlayerPos(W,H,fs){
+    const bSz=this.cs*BS;
+    const mob=W<500;
+    const pad=fs*(mob?0.5:0.7);
+    // パネル: アイコン(上) + 名前(下)（モバイルでは縮小）
+    const pw=fs*(mob?2.6:3.2),ph=fs*(mob?2.6:3);
+    // 盤面の4隅外側に配置
+    const bx1=this.ox-pw-pad, bx2=this.ox+bSz+pad;
+    const by1=this.oy-fs*0.5, by2=this.oy+bSz-ph+fs*0.5;
+    this.pPos=[
+      {x:bx1, y:by1},     // P0: 左上
+      {x:bx1, y:by2},     // P1: 左下
+      {x:bx2, y:by1},     // P2: 右上
+      {x:bx2, y:by2},     // P3: 右下
+    ];
+    return{pw,ph};
+  }
+
+  // プレイヤーパネル: アイコン→改行→名前（中央寄せ）
+  _drawPlayer(ctx,p,pos,pw,ph,fs,isActive,iCol,isYou=false,stoneCol=BLACK,isTeamTurn=false,isDone=false){
+    // 「あなた」ラベル（パネルの上）
+    if(isYou)tt(ctx,T('youLabel'),pos.x+pw/2,pos.y-fs*0.45,`bold ${fs*0.55}px sans-serif`,C.gold);
+    const isBlack=stoneCol===BLACK;
+    // 3段階: アクティブ > チームの番 > 非アクティブ
+    const bgNorm=isBlack?'rgba(20,20,20,0.3)':'rgba(240,239,232,0.5)';
+    const bgTeam=isBlack?'rgba(30,20,18,0.5)':'rgba(242,241,236,0.75)';
+    const bgAct=isBlack?'rgba(50,20,18,0.65)':'rgba(245,244,238,0.92)';
+    rr(ctx,pos.x,pos.y,pw,ph,8);
+    ctx.fillStyle=isActive?bgAct:isTeamTurn?bgTeam:bgNorm;ctx.fill();
+    if(isActive){
+      ctx.shadowColor=iCol;ctx.shadowBlur=12;
+      ctx.strokeStyle=iCol;ctx.lineWidth=2.5;ctx.stroke();
+      ctx.shadowBlur=0;
+    }else if(isTeamTurn){
+      ctx.strokeStyle=iCol;ctx.lineWidth=1.5;ctx.stroke();
+    }else{
+      ctx.strokeStyle=isBlack?'rgba(255,255,255,0.08)':'rgba(0,0,0,0.1)';ctx.lineWidth=1;ctx.stroke();
+    }
+    tt(ctx,p.icon,pos.x+pw/2,pos.y+ph*0.35,`${fs*1.2}px sans-serif`,C.txt);
+    const name=p.name.length>5?p.name.substring(0,5)+'…':p.name;
+    const nameCol=isBlack?((isActive||isTeamTurn)?C.txt:C.sub):((isActive||isTeamTurn)?'#1a1a1a':'#3a3a3a');
+    tt(ctx,name,pos.x+pw/2,pos.y+ph*0.78,`${fs*0.5}px sans-serif`,nameCol);
+    // 選択完了マーク
+    if(isDone){
+      tt(ctx,'✓',pos.x+pw-fs*0.4,pos.y+fs*0.4,`bold ${fs*0.5}px sans-serif`,'#2d9e5f');
+    }
+  }
+
+  // 石が角から飛んでくるアニメを開始
+  startFlyAnim(playerIdx,targetR,targetC,color,delay=0){
+    this.flyAnims.push({pi:playerIdx,tr:targetR,tc:targetC,color,startTime:performance.now()+delay,duration:400,done:false});
+  }
+
+  draw(ctx,W,H){
+    const isFinal=this.tm.phase===PH.GO;
+    ctx.fillStyle=battleBg(this.bd,this.tm.swap,isFinal);ctx.fillRect(0,0,W,H);this.btns=[];
+    const{eW,ox:lox,cx,fs}=L(W,H);
+    const mob=W<500;
+    const topH=fs*(mob?3.2:4.5); // モバイルではデッドスペース削減
+    const barH=fs*(mob?1.5:2); // モバイルではバー薄め
+    const barP=(topH-barH)/2;
+    const msgH=0;const bArea=H-topH;
+    // 盤面: 左右にプレイヤーパネルを確保（モバイルでは縮小）
+    const sidePanel=fs*(mob?2.8:3.5);
+    const bPx=Math.min(eW-sidePanel*2,bArea*0.85);
+    this.cs=bPx/BS;this.ox=(W-bPx)/2;this.oy=topH+(bArea-bPx)/2;
+    const cn=this.bd.cnt();const ph=this.tm.phase;
+    // 赤黒・白青ペアリング: 石色に紐づく（チームではなく）
+    const iCol=this.tm.tCol===BLACK?C.tA:C.tB;
+    const{pw:ppW,ph:ppH}=this._calcPlayerPos(W,H,fs);
+
+    // スプラバー（モバイルでは石数表示スペースを確保）
+    const numPad=mob?barH*0.8:0;
+    this.ren.splatBar(lox+numPad,barP,eW-numPad*2,barH,this.bd,false,this.tm.swap);
+
+    // ホームボタン + 速度ボタン（バーの下）
+    const hmX=2,hmY=barP+barH+fs*0.1,hmW=fs*1.5,hmH=fs*0.9;
+    hovFx(ctx,hmX,hmY,hmW,hmH);
+    tt(ctx,'🏠',hmX+hmW/2,hmY+hmH/2,`${fs*(isHov(hmX,hmY,hmW,hmH)?0.7:0.6)}px sans-serif`,isHov(hmX,hmY,hmW,hmH)?'rgba(255,255,255,0.95)':'rgba(255,255,255,0.7)');
+    this.btns.push({id:'home',x:hmX,y:hmY,w:hmW,h:hmH});
+
+    const spdX=W-fs*2,spdY=hmY;const spW=fs*1.8,spH=hmH;
+    rr(ctx,spdX,spdY,spW,spH,5);ctx.fillStyle=C.pan;ctx.fill();hovFx(ctx,spdX,spdY,spW,spH);
+    const spdTxt=this.tm.spd>=8?'⚡':`×${this.tm.spd}`;
+    tt(ctx,spdTxt,spdX+spW/2,spdY+spH/2,`bold ${fs*0.5}px sans-serif`,isHov(spdX,spdY,spW,spH)?C.txt:C.gold);
+    this.btns.push({id:'spd',x:spdX,y:spdY,w:spW,h:spH});
+
+    // ターンインジケーター（赤黒/白青ペアリング）
+    const isBlackTurn=this.tm.tCol===BLACK;
+    if(isBlackTurn){
+      ctx.fillStyle='#1a1a1a';ctx.fillRect(0,topH-6,W,6);
+      ctx.fillStyle=C.tA;ctx.fillRect(0,topH-7,W,1.5);ctx.fillRect(0,topH,W,1.5);
+    }else{
+      ctx.fillStyle='#e8e7e0';ctx.fillRect(0,topH-6,W,6);
+      ctx.fillStyle=C.tB;ctx.fillRect(0,topH-7,W,1.5);ctx.fillRect(0,topH,W,1.5);
+    }
+
+    // === 4隅プレイヤーパネル ===
+    const ps=this.tm.ps;const curP=this.tm.cp;
+    const humanCount=ps.filter(p=>!p.isCPU).length;
+    const swap=this.tm.swap;
+    const curTeam=this.tm.team; // 現在のチーム（'A' or 'B'）
+    const tm=this.tm;
+    for(let i=0;i<ps.length;i++){
+      const isAct=curP&&ps[i]===curP&&(ph===PH.PS||ph===PH.PC||ph===PH.PR);
+      const isYou=humanCount===1&&!ps[i].isCPU;
+      const sCol=ps[i].team==='A'?(swap?WHITE:BLACK):(swap?BLACK:WHITE);
+      const pCol=sCol===BLACK?C.tA:C.tB;
+      // チームの番かどうか（ゲーム進行中のみ）
+      const isTeamTurn=ps[i].team===curTeam&&ph!==PH.GO&&ph!==PH.ST;
+      // 選択完了（このターンで既に手を打った）
+      const tPs=tm.tPs;
+      const isDone=isTeamTurn&&!isAct&&((tm.pi===1&&tPs[0]===ps[i])||(ph===PH.RV||ph===PH.AN||ph===PH.TE));
+      this._drawPlayer(ctx,ps[i],this.pPos[i],ppW,ppH,fs,isAct,pCol,isYou,sCol,isTeamTurn,isDone);
+    }
+
+    if(this.tm.showB){
+      let sx=0,sy=0;
+      if(this.shakeT>0){const el=performance.now()-this.shakeT;if(el<500){const i2=(1-el/500)*8;sx=Math.sin(el*0.05)*i2;sy=Math.cos(el*0.07)*i2;}else this.shakeT=0;}
+      const showVM=ph===PH.PS||ph===PH.PC;
+      this.ren.board(this.bd,this.ox+sx,this.oy+sy,this.cs,{
+        vm:showVM?this.tm.vmS||this.tm.vm:null,
+        coopM:showVM?this.tm.coopS:null,
+        sel:this.tm.sel,
+        // revealは飛行完了後にのみ表示（700ms=飛行時間）
+        reveal:(ph===PH.RV&&this.tm.revT&&performance.now()-this.tm.revT>700)?this.tm.rev:null,
+        anims:this.tm.anims,ac:this.tm.anims.map(a=>[a.r,a.c]),
+        flipPreview:(ph===PH.PC&&this.tm.sel)?this.bd.flips(this.tm.sel[0],this.tm.sel[1],this.tm.tCol):null,
+      });
+      // 仮置きアイコン
+      if(ph===PH.PC&&this.tm.sel){
+        const[sr,sc]=this.tm.sel;const alpha=0.4+0.3*Math.sin(performance.now()/300); // 黄丸と同じ周期
+        ctx.globalAlpha=alpha;tt(ctx,this.tm.cp?.icon||'',this.ox+sc*this.cs+this.cs/2,this.oy+sr*this.cs+this.cs/2,`${this.cs*0.55}px sans-serif`,C.txt);ctx.globalAlpha=1;
+      }
+      // 石飛行アニメ描画
+      this._drawFlyAnims(ctx,fs);
+    }else{
+      ctx.fillStyle=C.ov;ctx.fillRect(0,topH,W,H-topH);
+      const cp2=this.tm.tPs[this.tm.pi];
+      if(cp2){tt(ctx,cp2.icon,cx,H*0.35,`${fs*3}px sans-serif`,C.txt);
+        tt(ctx,T('handoff',{name:cp2.name}),cx,H*0.35+fs*2.5,`bold ${fs*1}px sans-serif`,C.txt);
+        tt(ctx,T('tapContinue'),cx,H*0.35+fs*3.8,`${fs*0.5}px sans-serif`,C.sub);}
+    }
+
+    // リビール演出
+    if(ph===PH.RV){
+      // アイコン飛行（常に表示）
+      this._drawRevealFly(ctx,fs);
+      // かぶり時だけパネル表示（フェードイン）
+      if(this.tm.dup&&this.tm.bMsg){
+        // 被った2人のパネルの間に表示
+        const tp2=this.tm.tPs;
+        const p1i=ps.indexOf(tp2[0]),p2i=ps.indexOf(tp2[1]);
+        const pos1=this.pPos[p1i],pos2=this.pPos[p2i];
+        const bcx=pos1&&pos2?(pos1.x+pos2.x)/2+ppW/2:cx;
+        const bcy=pos1&&pos2?(pos1.y+pos2.y)/2+ppH/2:this.oy+this.cs*BS/2;
+        const sinceLand=performance.now()-this.tm.revT-700;
+        const revEl=sinceLand<0?0:Math.min(1,sinceLand/200);
+        ctx.save();ctx.globalAlpha=revEl;
+        const panW2=Math.min(ppW*2,fs*7);
+        const dupStone=this.tm.tCol;
+        const dupBorder=dupStone===BLACK?'rgba(180,50,40,0.8)':'rgba(60,140,190,0.8)';
+        ctx.fillStyle='rgba(0,0,0,0.75)';rr(ctx,bcx-panW2/2,bcy-fs*1,panW2,fs*2.2,12);ctx.fill();
+        ctx.strokeStyle=dupBorder;ctx.lineWidth=2.5;ctx.stroke();
+        tt(ctx,this.tm.bMsg,bcx,bcy-fs*0.15,`bold ${fs*0.65}px sans-serif`,C.txt);
+        tt(ctx,this.tm.bSub,bcx,bcy+fs*0.5,`${fs*0.5}px sans-serif`,C.goldL);
+        ctx.restore();
+      }
+    }
+
+    // 吹き出し（4隅プレイヤーから）
+    const now2=performance.now();
+    // 吹き出し描画（フェードアウト完了したものは自動除去）
+    this.tm.bubs=this.tm.bubs.filter(bb=>{
+      const el=now2-this.tm.revT-(bb.delay||0);
+      if(el<0)return true; // まだ表示前
+      if(el>2800)return false; // フェードアウト完了→除去
+      this._bubble(ctx,W,H,bb,fs);return true;
+    });
+
+    // 開始演出（画面中央）
+    if(ph===PH.ST&&this.tm.startMsg){
+      ctx.fillStyle='rgba(10,30,15,0.6)';ctx.fillRect(0,0,W,H);
+      tt(ctx,this.tm.msg,cx,this.oy+this.cs*BS/2,`bold ${fs*2}px sans-serif`,C.gold);
+    }
+    // 「打って！」「考え中…」等をアクティブプレイヤーのパネル付近に表示
+    if(ph!==PH.GO&&ph!==PH.RV&&ph!==PH.HO&&ph!==PH.PC&&ph!==PH.ST&&this.tm.msg&&curP){
+      const pi2=ps.indexOf(curP);const pp2=this.pPos[pi2];
+      if(pp2){
+        const isTop2=pp2.y<this.oy+this.cs*BS/2;
+        const isYou2=humanCount===1&&!curP.isCPU;
+        // 「あなた」ラベルと被らないようにずらす
+        const msgY2=isTop2?pp2.y+ppH+fs*0.5:pp2.y-(isYou2?fs*1.1:fs*0.6);
+        tt(ctx,this.tm.msg,pp2.x+ppW/2,msgY2,`bold ${fs*0.55}px sans-serif`,C.gold);
+      }
+    }
+    if(ph===PH.PC&&curP){
+      // OK/NGボタンをアクティブプレイヤーパネルの下に配置
+      const pi=ps.indexOf(curP);
+      const pp=this.pPos[pi];
+      if(pp){
+        const bw=Math.min(ppW*0.9,fs*2.8),bh=Math.max(fs*1.1,30);
+        const bx=pp.x+(ppW-bw)/2;
+        const by2=pp.y+ppH+fs*0.6;
+        tt(ctx,this.tm.msg,pp.x+ppW/2,by2,`bold ${fs*0.5}px sans-serif`,C.gold);
+        const btnY3=by2+fs*0.35;
+        drawBtn(ctx,'✓',bx,btnY3,bw*0.45,bh,'#2d9e5f','#fff');this.btns.push({id:'ok',x:bx,y:btnY3,w:bw*0.45,h:bh});
+        drawBtn(ctx,'✗',bx+bw*0.55,btnY3,bw*0.45,bh,'#c04040','#fff');this.btns.push({id:'ng',x:bx+bw*0.55,y:btnY3,w:bw*0.45,h:bh});
+        // 協力候補の警告
+        if(this.tm.sub)tt(ctx,this.tm.sub,pp.x+ppW/2,btnY3+bh+fs*0.3,`${fs*0.5}px sans-serif`,C.gold);
+      }
+    }
+    if(ph===PH.GO){
+      if(!this.vicT)this.vicT=performance.now();const el=Math.min(1,(performance.now()-this.vicT)/600);
+      const tc=this.tm.teamCnt();
+      const w=tc.a>tc.b?'A':tc.b>tc.a?'B':null;
+      const tpA=ps.filter(p=>p.team==='A'),tpB=ps.filter(p=>p.team==='B');
+      const iA=tpA[0]?.icon||'⚫',iB=tpB[0]?.icon||'⚪';
+      const wStone=w==='A'?(this.tm.swap?WHITE:BLACK):(this.tm.swap?BLACK:WHITE);
+      const stoneLabel=wStone===BLACK?'●':'○';
+      const winTxt=w?T('teamWin',{s:stoneLabel}):T('draw');
+      // 背景パネル
+      const panW=eW*0.8,panH=fs*6,panX=cx-panW/2,panY=H*0.2;
+      ctx.save();
+      ctx.globalAlpha=el;
+      rr(ctx,panX,panY,panW,panH,16);
+      ctx.fillStyle=wStone===BLACK?'rgba(20,20,20,0.85)':'rgba(245,244,238,0.9)';ctx.fill();
+      ctx.strokeStyle=wStone===BLACK?C.tA:C.tB;ctx.lineWidth=3;ctx.stroke();
+      // 勝者チームアイコン（グロー付き）
+      const winIcons=w==='A'?[tpA[0]?.icon,tpA[1]?.icon]:[tpB[0]?.icon,tpB[1]?.icon];
+      const glowCol=wStone===BLACK?C.tA:C.tB;
+      ctx.shadowColor=glowCol;ctx.shadowBlur=20;
+      tt(ctx,winIcons[0]||'',cx-fs*1.5,panY+fs*1.5,`${fs*1.8}px sans-serif`,C.txt);
+      tt(ctx,winIcons[1]||'',cx+fs*1.5,panY+fs*1.5,`${fs*1.8}px sans-serif`,C.txt);
+      ctx.shadowBlur=0;
+      // テキスト（文字色はパネルに合わせてコントラスト確保）
+      const txtCol=wStone===BLACK?'#f0efe8':'#1a1a1a';
+      tt(ctx,winTxt,cx,panY+fs*3.3,`bold ${fs*1.2}px sans-serif`,txtCol);
+      tt(ctx,`${iA} ${tc.a} - ${tc.b} ${iB}`,cx,panY+fs*4.7,`bold ${fs*0.9}px sans-serif`,C.gold);
+      ctx.restore();
+      const bw2=Math.min(eW*0.5,220),bh2=Math.max(fs*1.8,40);
+      const btnY2=panY+panH+fs*0.8;
+      drawBtn(ctx,T('toResult'),cx-bw2/2,btnY2,bw2,bh2);this.btns.push({id:'res',x:cx-bw2/2,y:btnY2,w:bw2,h:bh2});
+    }
+    // チュートリアル吹き出し
+    this._drawTutorial(ctx,W,H,cx,fs,ph);
+  }
+
+  // チュートリアルがアクティブか（ゲーム進行を止めるべきか）
+  get tutActive(){return this.tut.show&&!!this.tut.msg;}
+
+  _tutTrigger(ph){
+    if(!this.tut.show)return;
+    const t=this.tut;const tm=this.tm;
+    if(t.msg)return; // 表示中は新規トリガーしない
+    if(!t.intro&&tm.turnNum===0&&ph!==PH.ST){
+      t.msg='tut1';t.spots=null;t.intro=true;
+    }else if(!t.playShown&&ph===PH.PS&&!tm.cp?.isCPU){
+      // 合法手マスをスポットライト
+      const spots=(tm.vmS||tm.vm).map(([r,c])=>({x:this.ox+c*this.cs+this.cs/2,y:this.oy+r*this.cs+this.cs/2,r:this.cs*0.45}));
+      t.msg='tut2';t.spots=spots;t.playShown=true;
+    }else if(!t.rescueSeen&&tm.isRescue&&ph===PH.PS&&!tm.cp?.isCPU){
+      const spots=(tm.vmS||tm.vm).map(([r,c])=>({x:this.ox+c*this.cs+this.cs/2,y:this.oy+r*this.cs+this.cs/2,r:this.cs*0.45}));
+      t.msg='tutRescue';t.spots=spots;t.rescueSeen=true;
+    }else if(!t.coopSeen&&tm.coopS&&tm.coopS.length>0&&ph===PH.PS&&!tm.cp?.isCPU){
+      const spots=tm.coopS.map(([r,c])=>({x:this.ox+c*this.cs+this.cs/2,y:this.oy+r*this.cs+this.cs/2,r:this.cs*0.45}));
+      t.msg='tutCoop';t.spots=spots;t.coopSeen=true;
+    }else if(!t.dupSeen&&tm.dup&&ph===PH.RV){
+      const[r,c]=tm.p1;
+      t.msg='tutDup';t.spots=[{x:this.ox+c*this.cs+this.cs/2,y:this.oy+r*this.cs+this.cs/2,r:this.cs*0.6}];t.dupSeen=true;
+    }
+    if(t.msg)t.t=performance.now();
+  }
+
+  _drawTutorial(ctx,W,H,cx,fs,ph){
+    this._tutTrigger(ph);
+    if(!this.tut.show||!this.tut.msg)return;
+    const t=this.tut;const now=performance.now();
+    const elapsed=now-t.t;
+    const fadeIn=Math.min(1,elapsed/300);
+
+    // 濃い半透明オーバーレイ + スポットライト（clip方式）
+    ctx.save();ctx.globalAlpha=fadeIn*0.85;
+    if(t.spots&&t.spots.length>0){
+      // 隣接スポットをグループ化（枠の重なり防止）
+      const pad=6;
+      const cs2=this.cs||30;
+      const grid=new Set();const spotMap=new Map();
+      for(const s of t.spots){
+        const c=Math.round((s.x-this.ox)/cs2-0.5),r=Math.round((s.y-this.oy)/cs2-0.5);
+        const k=`${r},${c}`;grid.add(k);spotMap.set(k,s);
+      }
+      const visited=new Set();const groups=[];
+      for(const key of grid){if(visited.has(key))continue;
+        const[r0,c0]=key.split(',').map(Number);const group=[];const q=[[r0,c0]];visited.add(key);
+        while(q.length){const[r,c]=q.shift();group.push([r,c]);
+          for(const[dr,dc]of[[0,1],[0,-1],[1,0],[-1,0]]){const nk=`${r+dr},${c+dc}`;
+            if(grid.has(nk)&&!visited.has(nk)){visited.add(nk);q.push([r+dr,c+dc]);}}}
+        groups.push(group);
+      }
+      // クリップ: グループのバウンディングボックスで穴を開ける
+      ctx.beginPath();ctx.rect(0,0,W,H);
+      for(const g of groups){
+        const minR=Math.min(...g.map(v=>v[0])),maxR=Math.max(...g.map(v=>v[0]));
+        const minC=Math.min(...g.map(v=>v[1])),maxC=Math.max(...g.map(v=>v[1]));
+        const gx=this.ox+minC*cs2-pad,gy=this.oy+minR*cs2-pad;
+        const gw=(maxC-minC+1)*cs2+pad*2,gh=(maxR-minR+1)*cs2+pad*2,rd=8;
+        ctx.moveTo(gx+rd,gy);ctx.lineTo(gx+gw-rd,gy);ctx.quadraticCurveTo(gx+gw,gy,gx+gw,gy+rd);
+        ctx.lineTo(gx+gw,gy+gh-rd);ctx.quadraticCurveTo(gx+gw,gy+gh,gx+gw-rd,gy+gh);
+        ctx.lineTo(gx+rd,gy+gh);ctx.quadraticCurveTo(gx,gy+gh,gx,gy+gh-rd);
+        ctx.lineTo(gx,gy+rd);ctx.quadraticCurveTo(gx,gy,gx+rd,gy);
+      }
+      ctx.fillStyle='rgba(0,0,0,1)';ctx.fill('evenodd');
+      // グロー枠（グループ単位で1つの枠）
+      ctx.globalAlpha=fadeIn*(0.5+0.3*Math.sin(performance.now()/300));
+      for(const g of groups){
+        const minR=Math.min(...g.map(v=>v[0])),maxR=Math.max(...g.map(v=>v[0]));
+        const minC=Math.min(...g.map(v=>v[1])),maxC=Math.max(...g.map(v=>v[1]));
+        const gx=this.ox+minC*cs2-pad,gy=this.oy+minR*cs2-pad;
+        const gw=(maxC-minC+1)*cs2+pad*2,gh=(maxR-minR+1)*cs2+pad*2;
+        rr(ctx,gx,gy,gw,gh,8);ctx.strokeStyle=C.gold;ctx.lineWidth=3;ctx.stroke();
+      }
+    }else{
+      ctx.fillStyle='rgba(0,0,0,1)';ctx.fillRect(0,0,W,H);
+    }
+    ctx.restore();
+
+    // テキストパネル（スポットの近くに配置）
+    const lines=T(t.msg).split('\n');
+    const panH=fs*(1.2+lines.length*0.85);
+    const panW=Math.min(W*0.75,fs*16);
+    // 位置: スポットがあればその下、なければ盤面中央
+    let panY;
+    if(t.spots&&t.spots.length>0){
+      const maxY=Math.max(...t.spots.map(s=>s.y+s.r));
+      panY=Math.min(maxY+fs*0.5,H-panH-fs);
+    }else{
+      panY=this.oy+this.cs*BS/2-panH/2;
+    }
+    const panX=cx-panW/2;
+    ctx.save();ctx.globalAlpha=fadeIn;
+    rr(ctx,panX,panY,panW,panH,12);
+    ctx.fillStyle='rgba(0,0,0,0.85)';ctx.fill();
+    for(let i=0;i<lines.length;i++){
+      tt(ctx,lines[i],cx,panY+fs*0.8+i*fs*0.8,`bold ${fs*0.6}px sans-serif`,'#fff');
+    }
+    // ▼点滅（タップで進む）
+    const blink=Math.sin(now/300)>0?1:0.3;
+    ctx.globalAlpha=fadeIn*blink;
+    tt(ctx,'▼',cx,panY+panH-fs*0.3,`${fs*0.5}px sans-serif`,C.gold);
+    ctx.restore();
+  }
+
+  _tutDismiss(){
+    if(!this.tut.msg)return false;
+    this.tut.msg=null;this.tut.spots=null;this.tut.t=0;
+    // 全部見たらフラグ
+    if(this.tut.intro&&this.tut.playShown){window._tutSeen=true;}
+    return true;
+  }
+
+  // リビール時: 2つのアイコンが角から盤面のマスに飛んでくる
+  _drawRevealFly(ctx,fs){
+    const tm=this.tm;if(!tm.p1)return;
+    const elapsed=performance.now()-tm.revT;
+    const dur=700; // 飛行時間（少し長めで溜め感）
+    const t=Math.min(1,elapsed/dur);
+    const tp=tm.tPs;
+    const bSz=this.cs*BS;
+    const curve=eiFly(t); // 溜めて→ストン
+
+    // 飛行軌道計算（カーブ＋フェイント対応）
+    const flyPos=(fromX,fromY,toX,toY,amp,feint)=>{
+      let tgtX=toX,tgtY=toY;
+      if(feint){
+        // 前半40%はフェイント先に向かう、後半で本命に急旋回
+        const fX=this.ox+feint[1]*this.cs+this.cs/2;
+        const fY=this.oy+feint[0]*this.cs+this.cs/2;
+        const blend=Math.min(1,t/0.4); // 0→1（40%で切り替え完了）
+        const sw=blend*blend; // ease-in で滑らかに切り替え
+        tgtX=fX+(toX-fX)*sw;
+        tgtY=fY+(toY-fY)*sw;
+      }
+      const lx=fromX+(tgtX-fromX)*curve;
+      const ly=fromY+(tgtY-fromY)*curve;
+      const dx=tgtX-fromX,dy=tgtY-fromY;
+      const len=Math.sqrt(dx*dx+dy*dy)||1;
+      const nx=-dy/len,ny=dx/len;
+      const bulge=Math.sin(t*Math.PI)*amp;
+      return[lx+nx*bulge,ly+ny*bulge];
+    };
+
+    // P1
+    const p1Idx=tm.ps.indexOf(tp[0]);
+    const p1Pos=this.pPos[p1Idx];
+    if(p1Pos){
+      const fromX=p1Pos.x+fs*1.6,fromY=p1Pos.y+fs*1;
+      const toX=this.ox+tm.p1[1]*this.cs+this.cs/2;
+      const toY=this.oy+tm.p1[0]*this.cs+this.cs/2;
+      const[cx2,cy2]=flyPos(fromX,fromY,toX,toY,tm.flyCurve1||0,tm.flyFeint1);
+      const iconSz=this.cs*0.6*(0.5+t*0.5);
+      ctx.globalAlpha=Math.min(1,t*3);
+      tt(ctx,tp[0].icon,cx2,cy2,`${iconSz}px sans-serif`,C.txt);
+      ctx.globalAlpha=1;
+    }
+
+    // P2（かぶりでなければ）
+    if(!tm.dup&&tm.p2){
+      const p2Idx=tm.ps.indexOf(tp[1]);
+      const p2Pos=this.pPos[p2Idx];
+      if(p2Pos){
+        const fromX=p2Pos.x+fs*1.6,fromY=p2Pos.y+fs*1;
+        const toX=this.ox+tm.p2[1]*this.cs+this.cs/2;
+        const toY=this.oy+tm.p2[0]*this.cs+this.cs/2;
+        const[cx2,cy2]=flyPos(fromX,fromY,toX,toY,tm.flyCurve2||0,tm.flyFeint2);
+        const iconSz=this.cs*0.6*(0.5+t*0.5);
+        ctx.globalAlpha=Math.min(1,t*3);
+        tt(ctx,tp[1].icon,cx2,cy2,`${iconSz}px sans-serif`,C.txt);
+        ctx.globalAlpha=1;
+      }
+    }else if(tm.dup&&tm.p2){
+      // かぶり: 両方のアイコンが同じマスに向かって飛ぶ
+      const p2Idx=tm.ps.indexOf(tp[1]);
+      const p2Pos=this.pPos[p2Idx];
+      if(p2Pos){
+        const fromX=p2Pos.x+fs*1.6,fromY=p2Pos.y+fs*1;
+        const toX=this.ox+tm.p1[1]*this.cs+this.cs/2;
+        const toY=this.oy+tm.p1[0]*this.cs+this.cs/2;
+        if(t<1){
+          const[cx2,cy2]=flyPos(fromX,fromY,toX,toY,tm.flyCurve2||0,tm.flyFeint2);
+          const iconSz=this.cs*0.6*(0.5+t*0.5);
+          ctx.globalAlpha=Math.min(1,t*3);
+          tt(ctx,tp[1].icon,cx2,cy2,`${iconSz}px sans-serif`,C.txt);
+          ctx.globalAlpha=1;
+        }else{
+          // 到着後: 💥（パネルと同時に出る）
+          tt(ctx,'💥',toX,toY,`${this.cs*0.8}px sans-serif`,C.txt);
+        }
+      }
+    }
+  }
+
+  _drawFlyAnims(ctx,fs){
+    const now=performance.now();
+    this.flyAnims=this.flyAnims.filter(a=>!a.done);
+    for(const a of this.flyAnims){
+      const elapsed=now-a.startTime;if(elapsed<0)continue;
+      const t=Math.min(1,elapsed/a.duration);
+      const pos=this.pPos[a.pi];if(!pos)continue;
+      const fromX=pos.x+fs*1,fromY=pos.y+fs*0.9;
+      const toX=this.ox+a.tc*this.cs+this.cs/2;
+      const toY=this.oy+a.tr*this.cs+this.cs/2;
+      const cx2=fromX+(toX-fromX)*eo(t);
+      const cy2=fromY+(toY-fromY)*eo(t);
+      const sr=this.cs*0.35*eo(t);
+      this.ren.stone(cx2,cy2,sr,a.color);
+      if(t>=1)a.done=true;
+    }
+  }
+
+  _bubble(ctx,W,H,bb,fs){
+    const pos=this.pPos[bb.corner%4];
+    if(!pos)return;
+    // フェードイン/アウト計算
+    const elapsed=performance.now()-this.tm.revT-(bb.delay||0);
+    if(elapsed<0)return;
+    const fadeIn=Math.min(1,elapsed/200); // 200msフェードイン
+    const life=2500; // 表示時間
+    const fadeOut=elapsed>life?Math.max(0,1-(elapsed-life)/300):1; // 300msフェードアウト
+    const alpha=fadeIn*fadeOut;
+    if(alpha<=0)return;
+
+    const{pw:ppW2,ph:ppH2}=this._calcPlayerPos(W,H,fs);
+    const pw=Math.min(W*0.3,fs*7),ph2=fs*1.6;
+    const bSz=this.cs*BS;
+    const isTop=pos.y<this.oy+bSz/2;
+    // パネル基準: 上段→パネルの上、下段→パネルの下
+    const px=pos.x+(ppW2-pw)/2;
+    const py=isTop?pos.y-ph2-fs*0.2:pos.y+ppH2+fs*0.2;
+    const p=this.tm.ps[bb.corner%4];
+    const swap=this.tm.swap;
+    const isBlack=p?(p.team==='A'?(swap?false:true):(swap?true:false)):true;
+    ctx.save();ctx.globalAlpha=alpha;
+    const bgCol=isBlack?'rgba(140,45,40,0.85)':'rgba(50,120,160,0.85)';
+    const borderCol=isBlack?'rgba(200,80,70,0.5)':'rgba(100,180,220,0.5)';
+    // 上段キャラ→下から上へ、下段キャラ→上から下へ浮き上がる
+    // 上段: 下から上へ（最初は下にずれてて上に移動）、下段: 上から下へ
+    const floatDir=isTop?1:-1;
+    const floatY=py+floatDir*(1-fadeIn)*fs*0.5;
+    rr(ctx,px,floatY,pw,ph2,10);ctx.fillStyle=bgCol;ctx.fill();
+    ctx.strokeStyle=borderCol;ctx.lineWidth=1.5;ctx.stroke();
+    tt(ctx,bb.text,px+pw/2,floatY+ph2/2,`bold ${fs*0.5}px sans-serif`,'#fff');
+    ctx.restore();
+  }
+  update(now){
+    // チュートリアル表示中はゲーム進行を止める（autoタイマーも停止）
+    if(this.tutActive){if(this.tm.at){clearTimeout(this.tm.at);this.tm.at=null;this.tm._autoDeferred=true;}return;}
+    // チュートリアル解除後にautoを再開（ただしphaseが既に進行中なら不要）
+    if(this.tm._autoDeferred){this.tm._autoDeferred=false;
+      if(this.tm.phase===PH.ST||this.tm.phase===PH.TE||this.tm.phase===PH.PA)this.tm.auto(300);}
+    const rd=this.tm.spd>=8?150:this.tm.dup?Math.max(1500,1500/this.tm.spd):1200/Math.max(1,this.tm.spd);
+    if(this.tm.phase===PH.RV&&now-this.tm.revT>rd){if(this.tm.dup)this.shakeT=now;this.tm.execPlace();}
+    if(this.tm.phase===PH.AN)this.tm.updateAnim(now);
+  }
+  handleTap(tx,ty){
+    // チュートリアル表示中: タップで閉じる（ゲーム操作を無視）
+    if(this._tutDismiss())return;
+    for(const b of this.btns){if(!hit(tx,ty,b.x,b.y,b.w,b.h))continue;
+      if(b.id==='ok'){this.tm.confirm();return;}if(b.id==='ng'){this.tm.cancel();return;}
+      if(b.id==='res'){this.app.showResult(this.bd,this.tm.log,this.tm.hist,this.tm.bds,this.tm.ps,this.tm.swap);return;}
+      if(b.id==='home'){this.app.showTitle();return;}
+      if(b.id==='spd'){const v=[0.5,1,2,4,8];const ci=v.indexOf(this.tm.spd);this.tm.spd=v[(ci+1)%v.length];return;}
+      return;}
+    if(this.tm.phase===PH.GO)return;
+    const col=Math.floor((tx-this.ox)/this.cs),row=Math.floor((ty-this.oy)/this.cs);
+    if(row>=0&&row<BS&&col>=0&&col<BS)this.tm.tap(row,col,true);else this.tm.tap(0,0,false);
+  }
+}
+
+// §9 ResultScreen
+class ResultScreen{
+  constructor(app,bd,log,hist,bds,ps,swap=false){
+    this.app=app;this.bd=bd;this.log=log;this.hist=hist;this.bds=bds;this.ps=ps;this.swap=swap;
+    this.ren=new R(app.ctx);this.btns=[];this.ri=-1;this.ga=null;this.sa=null;
+    this.playing=false;this.pt=null;this.dragging=false;
+  }
+  draw(ctx,W,H){
+    ctx.fillStyle=battleBg(this.bd,this.swap,true);ctx.fillRect(0,0,W,H);this.btns=[];
+    const{eW,ox:lox,cx,fs}=L(W,H);
+    const cn=this.bd.cnt();
+    const scoreA=this.swap?cn.w:cn.b, scoreB=this.swap?cn.b:cn.w;
+    const w=scoreA>scoreB?'A':scoreB>scoreA?'B':null;let y=H*0.04;
+    // 背景が明るいか暗いかで文字色を切り替え
+    const wStone=w==='A'?(this.swap?WHITE:BLACK):(this.swap?BLACK:WHITE);
+    const light=w?(wStone===WHITE):false; // 白チーム勝利=明るい背景
+    const fgMain=light?'#1a1a1a':'#f0efe8';
+    const fgSub=light?'rgba(30,30,30,0.5)':'rgba(240,239,232,0.5)';
+    const panBg=light?'rgba(0,0,0,0.12)':'rgba(0,0,0,0.25)';
+    const sliderTrack=light?'rgba(0,0,0,0.12)':'rgba(255,255,255,0.1)';
+
+    const tpA=this.ps.filter(p=>p.team==='A'),tpB=this.ps.filter(p=>p.team==='B');
+    const iA=tpA[0]?.icon||'⚫',iB=tpB[0]?.icon||'⚪';
+
+    const stoneLabel2=w?(wStone===BLACK?'●':'○'):'';
+    const wTxt=w?T('teamWin',{s:stoneLabel2}):T('draw');
+    tt(ctx,wTxt,cx,y,`bold ${fs*1.3}px sans-serif`,w?(wStone===BLACK?C.tA:C.tB):fgMain);y+=fs*1.5;
+
+    // スコア
+    tt(ctx,`${iA} ${scoreA} - ${scoreB} ${iB}`,cx,y,`bold ${fs*0.9}px sans-serif`,C.gold);y+=fs*1.5;
+
+    // スプラバー
+    const rNumPad=W<500?fs*0.8:0;
+    this.ren.splatBar(lox+rNumPad,y,eW-rNumPad*2,fs*1.2,this.bd,true,this.swap);y+=fs*2.2;
+
+    // 統計データ計算
+    const dupA=this.log.filter(t=>t.dup&&t.team==='A').length;
+    const dupB=this.log.filter(t=>t.dup&&t.team==='B').length;
+    const total=this.log.length;
+    // 角: 最終盤面で実際に角にある石をカウント（最大4）
+    const colA=this.swap?WHITE:BLACK,colB=this.swap?BLACK:WHITE;
+    let cornA=0,cornB=0;
+    for(const[r,c]of[[0,0],[0,7],[7,0],[7,7]]){const v=this.bd.get(r,c);if(v===colA)cornA++;else if(v===colB)cornB++;}
+
+    // グラフ（中央揃え）+ 凡例は右側
+    const legendW=fs*3;
+    const graphW=eW*0.75;
+    const graphOx=cx-graphW/2;
+    if(this.hist.length>1){const gh=H*0.14;this._graph(ctx,graphOx,y,graphW,gh,fs,light,fgSub);this.ga={x:graphOx,y,w:graphW,h:gh};
+      const lgX=graphOx+graphW+fs*0.5,lgY=y+gh*0.3;
+      tt(ctx,'★',lgX,lgY,`bold ${fs*0.5}px sans-serif`,C.gold,'left');
+      tt(ctx,'Corner',lgX+fs*0.6,lgY,`${fs*0.45}px sans-serif`,fgSub,'left');
+      tt(ctx,'💥',lgX,lgY+fs*0.65,`${fs*0.45}px sans-serif`,fgMain,'left');
+      tt(ctx,'Dup',lgX+fs*0.6,lgY+fs*0.65,`${fs*0.45}px sans-serif`,fgSub,'left');
+      y+=gh+fs*0.6;
+    }
+
+    // スライダー（中央揃え）
+    const slW=graphW,slH=fs*0.7,slX=graphOx;
+    this.sa={x:slX,y,w:slW,h:slH*2};
+    rr(ctx,slX,y+slH*0.35,slW,slH*0.3,slH*0.15);ctx.fillStyle=light?'rgba(0,0,0,0.12)':'rgba(255,255,255,0.1)';ctx.fill();
+    if(this.bds.length>1){const idx=this.ri>=0?this.ri:this.bds.length-1;const kx=slX+(idx/(this.bds.length-1))*slW;
+      const knobR=slH*(isHov(slX-15,y-10,slW+30,slH*3)?0.65:0.5);
+      ctx.beginPath();ctx.arc(kx,y+slH*0.5,knobR,0,Math.PI*2);ctx.fillStyle=C.gold;ctx.fill();
+      ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();}
+    const pbX=slX+slW+fs*0.4,pbY=y,pbW=fs*1.5,pbH=slH*2;
+    hovFx(ctx,pbX,pbY,pbW,pbH);
+    const pbHov=isHov(pbX,pbY,pbW,pbH);
+    tt(ctx,this.playing?'⏸':'▶️',pbX+pbW/2,y+slH*0.5,`${fs*(pbHov?0.8:0.65)}px sans-serif`,pbHov?C.gold:fgMain);
+    this.btns.push({id:'play',x:pbX,y:pbY,w:pbW,h:pbH});
+    y+=slH*1.5;
+
+    // 盤面（中央）＋ ●統計（左）＋ ○統計（右）
+    const dBd=this.ri>=0&&this.ri<this.bds.length?this.bds[this.ri]:this.bd;
+    const mSz=Math.min(eW*0.35,H*0.22);const mCs=mSz/BS;
+    const mOx=cx-mSz/2;
+    let hlCells=null,flipCells=null;
+    if(this.ri>=1&&this.ri<this.bds.length){
+      const prev=this.bds[this.ri-1];hlCells=[];flipCells=[];
+      for(let r=0;r<BS;r++)for(let c=0;c<BS;c++){
+        const cur=dBd.get(r,c),prv=prev.get(r,c);
+        if(cur!==EMPTY&&prv===EMPTY)hlCells.push([r,c]);
+        else if(cur!==EMPTY&&prv!==EMPTY&&cur!==prv)flipCells.push([r,c]);
+      }
+    }
+    this.ren.board(dBd,mOx,y,mCs,{hlCells,flipCells});
+
+    // ターン表示（盤面の上中央）
+    const dBdCn=dBd.cnt();
+    const curIdx=this.ri>=0?this.ri:this.bds.length-1;
+    const dScoreA=this.swap?dBdCn.w:dBdCn.b, dScoreB=this.swap?dBdCn.b:dBdCn.w;
+    const dTotal=dScoreA+dScoreB+(dBdCn.e||0);
+    const pctA=dTotal?Math.round(dScoreA/dTotal*100):0;
+    const pctB=dTotal?Math.round(dScoreB/dTotal*100):0;
+    tt(ctx,`${curIdx} / ${total}`,cx,y-fs*0.3,`bold ${fs*0.55}px sans-serif`,C.gold);
+
+    // かぶり・角を現在ターンまでの累計で計算
+    const logsUpTo=this.log.slice(0,curIdx);
+    const curDupA=logsUpTo.filter(t=>t.dup&&t.team==='A').length;
+    const curDupB=logsUpTo.filter(t=>t.dup&&t.team==='B').length;
+    // 角: 現在盤面で実際に角にある石
+    let curCornA=0,curCornB=0;
+    for(const[r,c]of[[0,0],[0,7],[7,0],[7,7]]){const v=dBd.get(r,c);if(v===colA)curCornA++;else if(v===colB)curCornB++;}
+
+    // ●チーム統計（盤面の左、中央揃え）
+    const stLX=mOx-fs*1.2;let stLY=y+fs*0.3;
+    this.ren.stone(stLX,stLY,fs*0.35,this.swap?WHITE:BLACK);
+    stLY+=fs*0.7;
+    tt(ctx,`${dScoreA}`,stLX,stLY,`bold ${fs*0.6}px sans-serif`,fgMain);stLY+=fs*0.5;
+    tt(ctx,`${pctA}%`,stLX,stLY,`${fs*0.5}px sans-serif`,fgSub);stLY+=fs*0.7;
+    tt(ctx,T('dupCount',{n:curDupA}),stLX,stLY,`${fs*0.5}px sans-serif`,fgSub);stLY+=fs*0.55;
+    tt(ctx,T('cornerCount',{n:curCornA}),stLX,stLY,`${fs*0.5}px sans-serif`,fgSub);
+
+    // ○チーム統計（盤面の右、中央揃え）
+    const stRX=mOx+mSz+fs*1.2;let stRY=y+fs*0.3;
+    this.ren.stone(stRX,stRY,fs*0.35,this.swap?BLACK:WHITE);
+    stRY+=fs*0.7;
+    tt(ctx,`${dScoreB}`,stRX,stRY,`bold ${fs*0.6}px sans-serif`,fgMain);stRY+=fs*0.5;
+    tt(ctx,`${pctB}%`,stRX,stRY,`${fs*0.5}px sans-serif`,fgSub);stRY+=fs*0.7;
+    tt(ctx,T('dupCount',{n:curDupB}),stRX,stRY,`${fs*0.5}px sans-serif`,fgSub);stRY+=fs*0.55;
+    tt(ctx,T('cornerCount',{n:curCornB}),stRX,stRY,`${fs*0.5}px sans-serif`,fgSub);
+
+    y+=mSz+fs*0.8;
+
+    // ボタン
+    const bw2=Math.min(eW*0.38,160),bh2=Math.max(fs*1.6,38),gap2=fs*0.5;
+    drawBtn(ctx,T('retry'),cx-bw2-gap2/2,y,bw2,bh2);this.btns.push({id:'retry',x:cx-bw2-gap2/2,y,w:bw2,h:bh2});
+    const homeBg=light?'rgba(0,0,0,0.1)':'rgba(255,255,255,0.15)';
+    const homeTxt=light?'#333':'#eee';
+    drawBtn(ctx,T('home'),cx+gap2/2,y,bw2,bh2,homeBg,homeTxt);this.btns.push({id:'home',x:cx+gap2/2,y,w:bw2,h:bh2});
+  }
+
+  _graph(ctx,x,y,w,h,fs,light=false,fgSub='rgba(240,239,232,0.5)'){
+    const hist=this.hist;
+    const graphH=h;
+    rr(ctx,x,y,w,graphH,6);ctx.fillStyle=light?'rgba(0,0,0,0.08)':'rgba(0,0,0,0.25)';ctx.fill();
+    ctx.strokeStyle=light?'rgba(0,0,0,0.15)':'rgba(255,255,255,0.1)';ctx.lineWidth=1;ctx.stroke();
+    const p=6,gx=x+p,gy=y+p,gw=w-p*2,gh=graphH-p*2;
+    // 50%ライン
+    ctx.strokeStyle=light?'rgba(0,0,0,0.1)':'rgba(255,255,255,0.12)';ctx.setLineDash([3,3]);ctx.beginPath();ctx.moveTo(gx,gy+gh/2);ctx.lineTo(gx+gw,gy+gh/2);ctx.stroke();ctx.setLineDash([]);
+    if(hist.length<2)return;
+    const step=gw/(hist.length-1);
+    // エリア塗り: スプラバーの色に合わせる（黒=barB色、白=barW色）
+    // エリア塗り: スプラバーと同じ不透明な白黒
+    ctx.beginPath();ctx.moveTo(gx,gy+gh);for(let i=0;i<hist.length;i++){const h2=hist[i],t=h2.b+h2.w,r=t?h2.b/t:0.5;ctx.lineTo(gx+i*step,gy+gh*(1-r));}ctx.lineTo(gx+(hist.length-1)*step,gy+gh);ctx.closePath();ctx.fillStyle=C.barB;ctx.fill();
+    ctx.beginPath();ctx.moveTo(gx,gy);for(let i=0;i<hist.length;i++){const h2=hist[i],t=h2.b+h2.w,r=t?h2.b/t:0.5;ctx.lineTo(gx+i*step,gy+gh*(1-r));}ctx.lineTo(gx+(hist.length-1)*step,gy);ctx.closePath();ctx.fillStyle=C.barW;ctx.fill();
+    // ライン
+    ctx.beginPath();ctx.strokeStyle='rgba(255,255,255,0.5)';ctx.lineWidth=1.5;for(let i=0;i<hist.length;i++){const h2=hist[i],t=h2.b+h2.w,r=t?h2.b/t:0.5;const px2=gx+i*step,py=gy+gh*(1-r);i===0?ctx.moveTo(px2,py):ctx.lineTo(px2,py);}ctx.stroke();
+    // イベントマーカー
+    for(let i=0;i<hist.length;i++){const h2=hist[i],t=h2.b+h2.w,r=t?h2.b/t:0.5;const px2=gx+i*step,py=gy+gh*(1-r);
+      // チームAのイベント=上側、チームB=下側にオフセット
+      const above=h2.team==='A'?-1:1;
+      const hasCorner=h2.ev?.includes('角'),hasDupe=h2.ev?.includes('かぶり');
+      const both=hasCorner&&hasDupe;
+      if(hasCorner)tt(ctx,'★',px2+(both?-fs*0.15:0),py+above*fs*0.35,`bold ${fs*0.35}px sans-serif`,C.gold);
+      if(hasDupe)tt(ctx,'💥',px2+(both?fs*0.15:0),py+above*fs*0.35,`${fs*0.3}px sans-serif`,'#fff');}
+    // リプレイ位置インジケーター（黄色丸）
+    if(this.ri>=0&&this.ri<hist.length){const h2=hist[this.ri],t=h2.b+h2.w,r=t?h2.b/t:0.5;const px2=gx+this.ri*step,py=gy+gh*(1-r);
+      ctx.beginPath();ctx.arc(px2,py,5,0,Math.PI*2);ctx.fillStyle=C.gold;ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();}
+  }
+
+  handleTap(tx,ty){
+    // スライダー
+    if(this.sa&&this.bds.length>1&&hit(tx,ty,this.sa.x-15,this.sa.y-10,this.sa.w+30,this.sa.h+20)){
+      const r=Math.max(0,Math.min(1,(tx-this.sa.x)/this.sa.w));this.ri=Math.round(r*(this.bds.length-1));this.playing=false;return;}
+    // グラフ
+    if(this.ga&&this.hist.length>1&&hit(tx,ty,this.ga.x,this.ga.y,this.ga.w,this.ga.h)){
+      const r=(tx-this.ga.x)/this.ga.w;this.ri=Math.max(0,Math.min(this.hist.length-1,Math.round(r*(this.hist.length-1))));return;}
+    for(const b of this.btns){if(!hit(tx,ty,b.x,b.y,b.w,b.h))continue;
+      if(b.id==='retry'){this.app.restart();return;}if(b.id==='home'){this.app.showTitle();return;}
+      if(b.id==='play'){this._togglePlay();return;}return;}
+  }
+  handleMove(tx,ty){
+    if(this.sa&&this.bds.length>1&&this.dragging){
+      const r=Math.max(0,Math.min(1,(tx-this.sa.x)/this.sa.w));this.ri=Math.round(r*(this.bds.length-1));}
+  }
+  handleDown(tx,ty){if(this.sa&&hit(tx,ty,this.sa.x-15,this.sa.y-10,this.sa.w+30,this.sa.h+20))this.dragging=true;}
+  handleUp(){this.dragging=false;}
+  _togglePlay(){if(this.playing){this.playing=false;if(this.pt)clearInterval(this.pt);return;}
+    this.playing=true;if(this.ri<0||this.ri>=this.bds.length-1)this.ri=0;
+    this.pt=setInterval(()=>{if(this.ri>=this.bds.length-1){this.playing=false;clearInterval(this.pt);return;}this.ri++;},500);}
+}
+
+// §10 PlayerCountScreen — 初回起動時の人数選択
+class PlayerCountScreen{
+  constructor(app){this.app=app;this.btns=[];}
+  draw(ctx,W,H){
+    const t=(Math.sin(performance.now()/2000)+1)/2;
+    const mix=(a,b,r)=>Math.round(a+(b-a)*r);
+    ctx.fillStyle=`rgb(${mix(C.bgA[0],C.bgB[0],t)},${mix(C.bgA[1],C.bgB[1],t)},${mix(C.bgA[2],C.bgB[2],t)})`;
+    ctx.fillRect(0,0,W,H);this.btns=[];
+    const{eW,cx,fs}=L(W,H);
+    // テキスト色: 背景が白(t=1)→黒文字、背景が黒(t=0)→白文字
+    const fm=Math.round(240-(240-26)*t);
+    const fgMain=`rgb(${fm},${fm},${fm})`;
+    let y=H*0.2;
+    tt(ctx,'Synchronized',cx,y,`bold ${fs*1.2}px sans-serif`,C.gold);y+=fs*1.3;
+    tt(ctx,'Reversi',cx,y,`bold ${fs*1.6}px sans-serif`,fgMain);y+=fs*3;
+    tt(ctx,T('howMany'),cx,y,`bold ${fs*0.9}px sans-serif`,fgMain);y+=fs*1.2;
+    const icons=[
+      '１ 🙋💻💻💻',
+      '２ 🙋🙋💻💻',
+      '３ 🙋🙋🙋💻',
+      '４ 🙋🙋🙋🙋',
+    ];
+    const bw=Math.min(eW*0.6,280),bh=Math.max(fs*1.8,44);
+    for(let i=0;i<4;i++){
+      const by=y+i*(bh+fs*0.5);
+      drawBtn(ctx,icons[i],cx-bw/2,by,bw,bh,'#3a3a3a','#f0efe8');
+      this.btns.push({id:i+1,x:cx-bw/2,y:by,w:bw,h:bh});
+    }
+    // 言語切替（右上）
+    const lbX=W-fs*2.5,lbY=fs*0.3,lbW=fs*2,lbH=fs*0.7;
+    rr(ctx,lbX,lbY,lbW,lbH,4);
+    const lbH2=isHov(lbX,lbY,lbW,lbH);
+    ctx.fillStyle=lbH2?'rgba(255,255,255,0.15)':'rgba(255,255,255,0.05)';ctx.fill();
+    ctx.strokeStyle=lbH2?C.gold:fgMain;ctx.lineWidth=1;ctx.stroke();
+    tt(ctx,LANG==='ja'?'EN':'JA',lbX+lbW/2,lbY+lbH/2,`${lbH2?'bold ':''}${fs*0.35}px sans-serif`,lbH2?C.gold:fgMain);
+    this.btns.push({id:'lang',x:lbX,y:lbY,w:lbW,h:lbH});
+  }
+  handleTap(tx,ty){
+    for(const b of this.btns){if(!hit(tx,ty,b.x,b.y,b.w,b.h))continue;
+      if(b.id==='lang'){LANG=LANG==='ja'?'en':'ja';return;}
+      this.app.setupPlayers(b.id);return;}
+  }
+}
+
+// §11 GameApp
+class GameApp{
+  constructor(){
+    this.canvas=document.getElementById('gameCanvas');this.ctx=this.canvas.getContext('2d');this.W=0;this.H=0;this.scr=null;this.ts=null;this.lg=null;this.lastWinStone=null;
+    this.hoverX=-1;this.hoverY=-1;this.pressing=false;
+    this.resize();window.addEventListener('resize',()=>this.resize());
+    this.canvas.addEventListener('pointerdown',(e)=>{e.preventDefault();const[x,y]=this._xy(e);this.pressing=true;this.hoverX=x;this.hoverY=y;if(this.scr?.handleDown)this.scr.handleDown(x,y);if(this.scr?.handleTap)this.scr.handleTap(x,y);});
+    this.canvas.addEventListener('pointermove',(e)=>{const[x,y]=this._xy(e);this.hoverX=x;this.hoverY=y;if(this.scr?.handleMove)this.scr.handleMove(x,y);});
+    this.canvas.addEventListener('pointerup',()=>{this.pressing=false;if(this.scr?.handleUp)this.scr.handleUp();});
+    this.scr=new PlayerCountScreen(this);this.loop();
+  }
+  _xy(e){const r=this.canvas.getBoundingClientRect();return[(e.clientX-r.left)*(this.W/r.width),(e.clientY-r.top)*(this.H/r.height)];}
+  resize(){const d=window.devicePixelRatio||1;this.W=window.innerWidth;this.H=window.innerHeight;this.canvas.width=this.W*d;this.canvas.height=this.H*d;this.canvas.style.width=this.W+'px';this.canvas.style.height=this.H+'px';this.ctx.setTransform(d,0,0,d,0,0);}
+  showTitle(){this.scr=new TitleScreen(this,this.ts);}
+  setupPlayers(humanCount){
+    // humanCount人を4枠にランダムに割り当て
+    const slots=[0,1,2,3];
+    // シャッフル
+    for(let i=slots.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[slots[i],slots[j]]=[slots[j],slots[i]];}
+    const humanSlots=new Set(slots.slice(0,humanCount));
+    // TitleScreenを作ってisCPUを設定
+    this.showTitle();
+    const ts=this.scr;
+    for(let i=0;i<4;i++)ts.ps[i].isCPU=!humanSlots.has(i);
+  }
+  startGame(ps,lay,swap,spd){
+    const scr=this.scr;this.ts={ps:ps.map(p=>({...p})),li:LKEYS.indexOf(lay),swap,spd,pA:scr?.pA??0,pB:scr?.pB??1};
+    const players=ps.map(p=>({...p,color:swap?(p.team==='A'?WHITE:BLACK):(p.team==='A'?BLACK:WHITE)}));
+    this.lg={ps,lay,swap,spd};this.scr=new GameScreen(this,players,lay,spd,swap);
+  }
+  restart(){if(this.lg){const g=this.lg;this.startGame(g.ps,g.lay,g.swap,g.spd);}else this.showTitle();}
+  showResult(bd,log,hist,bds,ps,swap){
+    const cn=bd.cnt();const sA=swap?cn.w:cn.b,sB=swap?cn.b:cn.w;
+    this.lastWinStone=sA>sB?(swap?WHITE:BLACK):sB>sA?(swap?BLACK:WHITE):null;
+    this.scr=new ResultScreen(this,bd,log,hist,bds,ps,swap);
+  }
+  loop(){const now=performance.now();this.ctx.clearRect(0,0,this.W,this.H);if(this.scr){this.scr.draw?.(this.ctx,this.W,this.H);this.scr.update?.(now);}requestAnimationFrame(()=>this.loop());}
+}
+window._app=new GameApp();
+</script>
+</body>
+</html>
