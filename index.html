@@ -473,7 +473,7 @@ class R{
         // リング（協力マーク）
         ctx.beginPath();ctx.arc(cx2,cy2,sz3+cs*0.04,0,Math.PI*2);ctx.strokeStyle=`rgba(212,168,67,${pulse2})`;ctx.lineWidth=1.5;ctx.setLineDash([3,3]);ctx.stroke();ctx.setLineDash([]);
       }}
-    if(o.sel){const[r,c]=o.sel;ctx.fillStyle=C.sel;ctx.fillRect(ox+c*cs+1,oy+r*cs+1,cs-2,cs-2);}
+    if(o.sel){const[r,c]=o.sel;ctx.fillStyle=C.sel;ctx.fillRect(ox+c*cs+1,oy+r*cs+1,cs-2,cs-2);const sx=ox+c*cs+cs/2,sy=oy+r*cs+cs/2,sr=cs*0.25;const st=performance.now()/800;const spin=Math.floor(st)%2===0?((st%1)*Math.PI*2):(0);ctx.save();ctx.translate(sx,sy);ctx.rotate(spin);ctx.beginPath();for(let i=0;i<5;i++){const a=i*Math.PI*2/5-Math.PI/2;const a2=a+Math.PI/5;ctx.lineTo(Math.cos(a)*sr,Math.sin(a)*sr);ctx.lineTo(Math.cos(a2)*sr*0.4,Math.sin(a2)*sr*0.4);}ctx.closePath();ctx.fillStyle=C.gold;ctx.globalAlpha=0.9;ctx.fill();ctx.restore();}
     // 反転プレビュー: ひっくり返る石を薄くハイライト
     if(o.flipPreview)for(const[r,c]of o.flipPreview){ctx.fillStyle='rgba(212,168,67,0.25)';ctx.fillRect(ox+c*cs+1,oy+r*cs+1,cs-2,cs-2);}
     if(o.reveal){const now=performance.now();for(const{cell,icon}of o.reveal){const[r,c]=cell;const p=0.3+0.2*Math.sin(now/150);ctx.fillStyle=`rgba(212,168,67,${p})`;ctx.fillRect(ox+c*cs+1,oy+r*cs+1,cs-2,cs-2);tt(ctx,icon,ox+c*cs+cs/2,oy+r*cs+cs/2,`${cs*0.5}px sans-serif`,'rgba(255,255,255,0.9)');}}
