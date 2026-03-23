@@ -552,9 +552,16 @@ class R{
     else{const p=a.progress;let sx,col;if(p<0.5){sx=1-p*2;col=a.from;}else{sx=(p-0.5)*2;col=a.to;}this.stone(cx,cy,sr,col,Math.max(0.02,sx));}
   }
   // swap: trueの場合、左=白(チームA)、右=黒(チームB)
-  splatBar(x,y,w,h,bd,final=false,swap=false){
+  splatBar(x,y,w,h,bd,final=false,swap=false,locked=null){
     const ctx=this.ctx;const cnt=bd?bd.cnt():{b:0,w:0,e:64};
     const total=BS*BS;
+    // 確定マスカウント
+    let lockedL=0,lockedR=0;
+    if(locked){for(let i=0;i<BS*BS;i++){
+      if(locked[i]===1){if(swap)lockedR++;else lockedL++;}
+      else if(locked[i]===2){if(swap)lockedL++;else lockedR++;}
+    }}
+    const lockedLPct=lockedL/total,lockedRPct=lockedR/total;
     // swap考慮: 左=チームA、右=チームB
     const leftCol=swap?C.barW:C.barB, rightCol=swap?C.barB:C.barW;
     const leftPct=swap?cnt.w/total:cnt.b/total, rightPct=swap?cnt.b/total:cnt.w/total;
@@ -580,19 +587,32 @@ class R{
       ctx.fillStyle=leftCol;ctx.fillRect(x,y,w*dleft,h);
       ctx.fillStyle=rightCol;ctx.fillRect(x+w*(1-dright),y,w*dright,h);
     }else{
-      // 波形のみで描画。残りマスが減ると波が収まる（0で直線）
+      // 5色スプラバー: 確定(パキッと)→暫定(波)→灰→暫定(波)→確定(パキッと)
       const now2=performance.now()*0.001;
-      const amp=Math.min(1,cnt.e/10); // 残り10マス以下で収束開始、0で直線
+      const amp=Math.min(1,cnt.e/10);
       const waveL=(i)=>(Math.sin(i/h*Math.PI*2.5+now2)*2.2+Math.sin(i/h*Math.PI*1.3+now2*1.7)*1.3)*amp;
       const waveR=(i)=>(Math.sin(i/h*Math.PI*2.0+now2*0.8+2)*1.8+Math.sin(i/h*Math.PI*1.6+now2*1.3+5)*1.3)*amp;
-      if(dleft>0.01){const mx=x+w*dleft;
-        ctx.beginPath();ctx.moveTo(x,y);
+      // 確定部分（左）: パキッとした色、波なし
+      const lkL=lockedLPct;
+      if(lkL>0.005){ctx.fillStyle=leftCol;ctx.fillRect(x,y,w*lkL,h);
+        // 確定/暫定の境界線
+        ctx.fillStyle='rgba(212,168,67,0.4)';ctx.fillRect(x+w*lkL-1,y,2,h);}
+      // 暫定部分（左）: 波あり、少し薄い色
+      const tentL=dleft-lkL;
+      if(tentL>0.01){const mx=x+w*dleft;const bx=x+w*lkL;
+        ctx.beginPath();ctx.moveTo(bx,y);
         for(let i=0;i<=h;i++)ctx.lineTo(mx+waveL(i),y+i);
-        ctx.lineTo(x,y+h);ctx.closePath();ctx.fillStyle=leftCol;ctx.fill();}
-      if(dright>0.01){const mx=x+w*(1-dright);
-        ctx.beginPath();ctx.moveTo(x+w,y);
+        ctx.lineTo(bx,y+h);ctx.closePath();ctx.fillStyle=leftCol;ctx.globalAlpha=0.7;ctx.fill();ctx.globalAlpha=1;}
+      // 確定部分（右）: パキッとした色、波なし
+      const lkR=lockedRPct;
+      if(lkR>0.005){ctx.fillStyle=rightCol;ctx.fillRect(x+w*(1-lkR),y,w*lkR,h);
+        ctx.fillStyle='rgba(212,168,67,0.4)';ctx.fillRect(x+w*(1-lkR)-1,y,2,h);}
+      // 暫定部分（右）: 波あり、少し薄い色
+      const tentR=dright-lkR;
+      if(tentR>0.01){const mx=x+w*(1-dright);const bx=x+w*(1-lkR);
+        ctx.beginPath();ctx.moveTo(bx,y);
         for(let i=0;i<=h;i++)ctx.lineTo(mx+waveR(i),y+i);
-        ctx.lineTo(x+w,y+h);ctx.closePath();ctx.fillStyle=rightCol;ctx.fill();}
+        ctx.lineTo(bx,y+h);ctx.closePath();ctx.fillStyle=rightCol;ctx.globalAlpha=0.7;ctx.fill();ctx.globalAlpha=1;}
     }
     ctx.restore();
     if(!final){rr(ctx,x,y,w,h,h/2);ctx.strokeStyle='rgba(255,255,255,0.2)';ctx.lineWidth=1;ctx.stroke();}
@@ -836,6 +856,9 @@ class TM{
     // 飛行軌道のランダムパラメータ
     this.flyCurve1=(Math.random()-0.5)*200;
     this.flyCurve2=(Math.random()-0.5)*200;
+    // 導線パターン: 0=曲線(default), 1=S字, 2=減速→加速, 3=スパイラル
+    this.flyPat1=Math.floor(Math.random()*4);
+    this.flyPat2=Math.floor(Math.random()*4);
     // フェイント: 30%の確率で別の候補マスに向かってから急旋回
     const vm=this.vmS||[];
     this.flyFeint1=null;this.flyFeint2=null;
@@ -1278,7 +1301,7 @@ class GameScreen{
       this.btns.push({id:'spd',x:spdX,y:spdY,w:spW,h:spH});
       // Row 2: スプラバー
       barH=fs*1.5;const barY=ctrlH+6;const numPad=barH*1.0;
-      this.ren.splatBar(lox+numPad,barY,eW-numPad*2,barH,this.bd,false,this.tm.swap);
+      this.ren.splatBar(lox+numPad,barY,eW-numPad*2,barH,this.bd,false,this.tm.swap,_locked);
       // Row 3: ターンインジケーター
       const turnY=barY+barH+2;
       if(isBlackTurn){ctx.fillStyle='#1a1a1a';ctx.fillRect(0,turnY,W,6);ctx.fillStyle=C.tA;ctx.fillRect(0,turnY-1,W,1.5);ctx.fillRect(0,turnY+6,W,1.5);}
@@ -1295,7 +1318,7 @@ class GameScreen{
       const sidePanel=fs*3.5;const bPx=Math.min(eW-sidePanel*2,bArea*0.85);
       this.cs=bPx/BS;this.ox=(W-bPx)/2;this.oy=topH+(bArea-bPx)/2;
       const pnl=this._calcPlayerPos(W,H,fs);ppW=pnl.pw;ppH=pnl.ph;
-      this.ren.splatBar(lox,barP2,eW,barH,this.bd,false,this.tm.swap);
+      this.ren.splatBar(lox,barP2,eW,barH,this.bd,false,this.tm.swap,_locked);
       const hmX=2,hmY=barP2+barH+fs*0.1,hmW=fs*1.5,hmH=fs*0.9;
       hovFx(ctx,hmX,hmY,hmW,hmH);
       tt(ctx,'🏠',hmX+hmW/2,hmY+hmH/2,`${fs*(isHov(hmX,hmY,hmW,hmH)?0.7:0.6)}px sans-serif`,isHov(hmX,hmY,hmW,hmH)?'rgba(255,255,255,0.95)':'rgba(255,255,255,0.7)');
@@ -1587,24 +1610,44 @@ class GameScreen{
     const curve=eiFly(t); // 溜めて→ストン
 
     // 飛行軌道計算（カーブ＋フェイント対応）
-    const flyPos=(fromX,fromY,toX,toY,amp,feint)=>{
+    const flyPos=(fromX,fromY,toX,toY,amp,feint,pat)=>{
       let tgtX=toX,tgtY=toY;
       if(feint){
-        // 前半40%はフェイント先に向かう、後半で本命に急旋回
         const fX=this.ox+feint[1]*this.cs+this.cs/2;
         const fY=this.oy+feint[0]*this.cs+this.cs/2;
-        const blend=Math.min(1,t/0.4); // 0→1（40%で切り替え完了）
-        const sw=blend*blend; // ease-in で滑らかに切り替え
-        tgtX=fX+(toX-fX)*sw;
-        tgtY=fY+(toY-fY)*sw;
+        const blend=Math.min(1,t/0.4);const sw=blend*blend;
+        tgtX=fX+(toX-fX)*sw;tgtY=fY+(toY-fY)*sw;
       }
-      const lx=fromX+(tgtX-fromX)*curve;
-      const ly=fromY+(tgtY-fromY)*curve;
       const dx=tgtX-fromX,dy=tgtY-fromY;
       const len=Math.sqrt(dx*dx+dy*dy)||1;
       const nx=-dy/len,ny=dx/len;
-      const bulge=Math.sin(t*Math.PI)*amp;
-      return[lx+nx*bulge,ly+ny*bulge];
+      let lx,ly;
+      switch(pat||0){
+        case 1: { // S字: 前半で上にそれて後半で下にそれる
+          const s=Math.sin(t*Math.PI*2)*amp*0.7;
+          lx=fromX+(tgtX-fromX)*curve+nx*s;
+          ly=fromY+(tgtY-fromY)*curve+ny*s;
+          break;}
+        case 2: { // 減速→加速: 途中で一瞬止まりかけてからグッと加速
+          const slow=t<0.5?t*t*2:1-2*(1-t)*(1-t)+1;
+          const ct=Math.min(1,slow);
+          lx=fromX+(tgtX-fromX)*ct;ly=fromY+(tgtY-fromY)*ct;
+          const b=Math.sin(t*Math.PI)*amp*0.5;
+          lx+=nx*b;ly+=ny*b;
+          break;}
+        case 3: { // スパイラル: ぐるっと1回転しながら収束
+          const r2=amp*0.6*(1-t);
+          const angle=t*Math.PI*3;
+          lx=fromX+(tgtX-fromX)*curve+Math.cos(angle)*r2;
+          ly=fromY+(tgtY-fromY)*curve+Math.sin(angle)*r2;
+          break;}
+        default: { // 通常曲線
+          lx=fromX+(tgtX-fromX)*curve;ly=fromY+(tgtY-fromY)*curve;
+          const bulge=Math.sin(t*Math.PI)*amp;
+          lx+=nx*bulge;ly+=ny*bulge;
+          break;}
+      }
+      return[lx,ly];
     };
 
     // P1
@@ -1614,7 +1657,7 @@ class GameScreen{
       const fromX=p1Pos.x+fs*1.6,fromY=p1Pos.y+fs*1;
       const toX=this.ox+tm.p1[1]*this.cs+this.cs/2;
       const toY=this.oy+tm.p1[0]*this.cs+this.cs/2;
-      const[cx2,cy2]=flyPos(fromX,fromY,toX,toY,tm.flyCurve1||0,tm.flyFeint1);
+      const[cx2,cy2]=flyPos(fromX,fromY,toX,toY,tm.flyCurve1||0,tm.flyFeint1,tm.flyPat1);
       const iconSz=this.cs*0.6*(0.5+t*0.5);
       ctx.globalAlpha=Math.min(1,t*3);
       tt(ctx,tp[0].icon,cx2,cy2,`${iconSz}px sans-serif`,C.txt);
@@ -1629,7 +1672,7 @@ class GameScreen{
         const fromX=p2Pos.x+fs*1.6,fromY=p2Pos.y+fs*1;
         const toX=this.ox+tm.p2[1]*this.cs+this.cs/2;
         const toY=this.oy+tm.p2[0]*this.cs+this.cs/2;
-        const[cx2,cy2]=flyPos(fromX,fromY,toX,toY,tm.flyCurve2||0,tm.flyFeint2);
+        const[cx2,cy2]=flyPos(fromX,fromY,toX,toY,tm.flyCurve2||0,tm.flyFeint2,tm.flyPat2);
         const iconSz=this.cs*0.6*(0.5+t*0.5);
         ctx.globalAlpha=Math.min(1,t*3);
         tt(ctx,tp[1].icon,cx2,cy2,`${iconSz}px sans-serif`,C.txt);
@@ -1644,7 +1687,7 @@ class GameScreen{
         const toX=this.ox+tm.p1[1]*this.cs+this.cs/2;
         const toY=this.oy+tm.p1[0]*this.cs+this.cs/2;
         if(t<1){
-          const[cx2,cy2]=flyPos(fromX,fromY,toX,toY,tm.flyCurve2||0,tm.flyFeint2);
+          const[cx2,cy2]=flyPos(fromX,fromY,toX,toY,tm.flyCurve2||0,tm.flyFeint2,tm.flyPat2);
           const iconSz=this.cs*0.6*(0.5+t*0.5);
           ctx.globalAlpha=Math.min(1,t*3);
           tt(ctx,tp[1].icon,cx2,cy2,`${iconSz}px sans-serif`,C.txt);
@@ -1891,11 +1934,21 @@ class ResultScreen{
     if(hist.length<2)return;
     const step=gw/(hist.length-1);
     // エリア塗り: スプラバーの色に合わせる（黒=barB色、白=barW色）
-    // エリア塗り: スプラバーと同じ不透明な白黒
-    ctx.beginPath();ctx.moveTo(gx,gy+gh);for(let i=0;i<hist.length;i++){const h2=hist[i],t=h2.b+h2.w,r=t?h2.b/t:0.5;ctx.lineTo(gx+i*step,gy+gh*(1-r));}ctx.lineTo(gx+(hist.length-1)*step,gy+gh);ctx.closePath();ctx.fillStyle=C.barB;ctx.fill();
-    ctx.beginPath();ctx.moveTo(gx,gy);for(let i=0;i<hist.length;i++){const h2=hist[i],t=h2.b+h2.w,r=t?h2.b/t:0.5;ctx.lineTo(gx+i*step,gy+gh*(1-r));}ctx.lineTo(gx+(hist.length-1)*step,gy);ctx.closePath();ctx.fillStyle=C.barW;ctx.fill();
-    // ライン
-    ctx.beginPath();ctx.strokeStyle='rgba(255,255,255,0.5)';ctx.lineWidth=1.5;for(let i=0;i<hist.length;i++){const h2=hist[i],t=h2.b+h2.w,r=t?h2.b/t:0.5;const px2=gx+i*step,py=gy+gh*(1-r);i===0?ctx.moveTo(px2,py):ctx.lineTo(px2,py);}ctx.stroke();
+    // エリア塗り: 3色（白=上、灰=中間空きマス、黒=下）
+    // 黒エリア（下から）
+    ctx.beginPath();ctx.moveTo(gx,gy+gh);
+    for(let i=0;i<hist.length;i++){const h2=hist[i];const bPct=h2.b/64;ctx.lineTo(gx+i*step,gy+gh*(1-bPct));}
+    ctx.lineTo(gx+(hist.length-1)*step,gy+gh);ctx.closePath();ctx.fillStyle=C.barB;ctx.fill();
+    // 白エリア（上から）
+    ctx.beginPath();ctx.moveTo(gx,gy);
+    for(let i=0;i<hist.length;i++){const h2=hist[i];const wPct=h2.w/64;ctx.lineTo(gx+i*step,gy+gh*wPct);}
+    ctx.lineTo(gx+(hist.length-1)*step,gy);ctx.closePath();ctx.fillStyle=C.barW;ctx.fill();
+    // 中間の灰色部分は背景色がそのまま見えるので追加描画不要
+    // 白黒の境界ライン
+    ctx.beginPath();ctx.strokeStyle='rgba(255,255,255,0.3)';ctx.lineWidth=1;
+    for(let i=0;i<hist.length;i++){const h2=hist[i];const wPct=h2.w/64;const px2=gx+i*step,py=gy+gh*wPct;i===0?ctx.moveTo(px2,py):ctx.lineTo(px2,py);}ctx.stroke();
+    ctx.beginPath();ctx.strokeStyle='rgba(0,0,0,0.3)';ctx.lineWidth=1;
+    for(let i=0;i<hist.length;i++){const h2=hist[i];const bPct=h2.b/64;const px2=gx+i*step,py=gy+gh*(1-bPct);i===0?ctx.moveTo(px2,py):ctx.lineTo(px2,py);}ctx.stroke();
     // イベントマーカー
     for(let i=0;i<hist.length;i++){const h2=hist[i],t=h2.b+h2.w,r=t?h2.b/t:0.5;const px2=gx+i*step,py=gy+gh*(1-r);
       // チームAのイベント=上側、チームB=下側にオフセット
