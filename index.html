@@ -23,13 +23,13 @@ canvas{display:block;width:100%;height:100%;}
 let LANG=(navigator.language||'ja').startsWith('ja')?'ja':'en';
 const I18N={
   // タイトル・メニュー
-  subtitle:{ja:'2vs2 パーティーリバーシ',en:'2vs2 Party Reversi'},
-  howMany:{ja:'何人で遊ぶ？',en:'How many players?'},
-  firstTurn:{ja:'先攻',en:'1st'},
-  secondTurn:{ja:'後攻',en:'2nd'},
-  layout:{ja:'初期配置',en:'Layout'},
-  speed:{ja:'観戦速度',en:'Speed'},
-  start:{ja:'▶  はじめる',en:'▶  START'},
+  subtitle:{ja:'2vs2 パーティーリバーシ','ja-h':'2vs2 パーティーリバーシ',en:'2vs2 Party Reversi'},
+  howMany:{ja:'何人で遊ぶ？','ja-h':'なんにんであそぶ？',en:'How many players?'},
+  firstTurn:{ja:'先攻','ja-h':'せんこう',en:'1st'},
+  secondTurn:{ja:'後攻','ja-h':'こうこう',en:'2nd'},
+  layout:{ja:'初期配置','ja-h':'さいしょのならび',en:'Layout'},
+  speed:{ja:'観戦速度','ja-h':'みるはやさ',en:'Speed'},
+  start:{ja:'▶  はじめる','ja-h':'▶  はじめる',en:'▶  START'},
   // レイアウト名
   standard:{ja:'スタンダード',en:'Standard'},
   parallel:{ja:'パラレル',en:'Parallel'},
@@ -37,59 +37,64 @@ const I18N={
   scatter:{ja:'スキャッター',en:'Scatter'},
   random:{ja:'ランダム',en:'Random'},
   // ゲーム中
-  thinkingOf:{ja:'{name} 考え中…',en:'{name} thinking...'},
-  playOf:{ja:'{name}の番だよ',en:"{name}'s turn"},
-  confirmQ:{ja:'ここに決定！',en:'Place here!'},
-  coopWarn:{ja:'⚠ 相方と合わないと置けないかも',en:'⚠ Needs partner sync'},
-  confirmHint:{ja:'他の場所タップで変更',en:'Tap elsewhere to change'},
-  homeConfirm:{ja:'ホームに戻る？',en:'Return home?'},
-  homeConfirmSub:{ja:'中断すると今のゲームは消えるよ',en:'Current game will be lost'},
-  homeYes:{ja:'戻る',en:'Leave'},
-  homeNo:{ja:'続ける',en:'Stay'},
-  teamThinking:{ja:'{i1}{i2} 考え中…',en:'{i1}{i2} thinking…'},
-  teamDecided:{ja:'{i1}{i2} 決定！',en:'{i1}{i2} decided!'},
-  gameStart:{ja:'🎮 開始！',en:'🎮 START!'},
-  pass:{ja:'パス！',en:'Pass!'},
-  crashed:{ja:'💥 かぶった！',en:'💥 Collision!'},
-  crashedSub:{ja:'1個だけ置けた',en:'Only one placed'},
-  opened:{ja:'✨ オープン！',en:'✨ Open!'},
-  openedSub:{ja:'2個置きます！',en:'Placing two!'},
+  thinkingOf:{ja:'{name} 考え中…','ja-h':'{name} かんがえちゅう…',en:'{name} thinking...'},
+  playOf:{ja:'{name}の番だよ','ja-h':'{name}のばんだよ',en:"{name}'s turn"},
+  confirmQ:{ja:'ここに決定！','ja-h':'ここにきめた！',en:'Place here!'},
+  coopWarn:{ja:'⚠ 相方と合わないと置けないかも','ja-h':'⚠ あいぼうとあわないとおけないかも',en:'⚠ Needs partner sync'},
+  confirmHint:{ja:'他の場所タップで変更','ja-h':'ほかのばしょタップでへんこう',en:'Tap elsewhere to change'},
+  homeConfirm:{ja:'ホームに戻る？','ja-h':'ホームにもどる？',en:'Return home?'},
+  homeConfirmSub:{ja:'中断すると今のゲームは消えるよ','ja-h':'いまのゲームはきえちゃうよ',en:'Current game will be lost'},
+  homeYes:{ja:'戻る','ja-h':'もどる',en:'Leave'},
+  homeNo:{ja:'続ける','ja-h':'つづける',en:'Stay'},
+  teamThinking:{ja:'{i1}{i2} 考え中…','ja-h':'{i1}{i2} かんがえちゅう…',en:'{i1}{i2} thinking…'},
+  teamDecided:{ja:'{i1}{i2} 決定！','ja-h':'{i1}{i2} きめた！',en:'{i1}{i2} decided!'},
+  gameStart:{ja:'🎮 開始！','ja-h':'🎮 スタート！',en:'🎮 START!'},
+  pass:{ja:'パス！','ja-h':'パス！',en:'Pass!'},
+  crashed:{ja:'💥 かぶった！','ja-h':'💥 かぶった！',en:'💥 Collision!'},
+  crashedSub:{ja:'1個だけ置けた','ja-h':'1こだけおけた',en:'Only one placed'},
+  opened:{ja:'✨ オープン！','ja-h':'✨ オープン！',en:'✨ Open!'},
+  openedSub:{ja:'2個置きます！','ja-h':'2こおきます！',en:'Placing two!'},
   // 勝敗
-  teamWin:{ja:'{s}チームの勝ち！',en:'Team {s} wins!'},
-  draw:{ja:'🤝 引き分け！',en:'🤝 Draw!'},
-  toResult:{ja:'📊 リザルト',en:'📊 Result'},
+  teamWin:{ja:'{s}チームの勝ち！','ja-h':'{s}チームのかち！',en:'Team {s} wins!'},
+  draw:{ja:'🤝 引き分け！','ja-h':'🤝 ひきわけ！',en:'🤝 Draw!'},
+  toResult:{ja:'📊 リザルト','ja-h':'📊 けっか',en:'📊 Result'},
   // リザルト
-  retry:{ja:'🔄 もう一度',en:'🔄 Retry'},
-  home:{ja:'🏠 ホーム',en:'🏠 Home'},
+  retry:{ja:'🔄 もう一度','ja-h':'🔄 もういちど',en:'🔄 Retry'},
+  home:{ja:'🏠 ホーム','ja-h':'🏠 ホーム',en:'🏠 Home'},
   turnStat:{ja:'{t}ターン  かぶり●{dA} ○{dB}  角{c}/4',en:'{t} turns  Dup●{dA} ○{dB}  Corner{c}/4'},
   turnLabel:{ja:'ターン {n}/{max}',en:'Turn {n}/{max}'},
   cornerLegend:{ja:'角取得',en:'Corner'},
   dupLegend:{ja:'かぶり',en:'Dup'},
-  youLabel:{ja:'あなた',en:'YOU'},
-  yourTurn:{ja:'あなたの番',en:'YOUR TURN'},
+  youLabel:{ja:'あなた','ja-h':'あなた',en:'YOU'},
+  yourTurn:{ja:'あなたの番','ja-h':'あなたのばん',en:'YOUR TURN'},
   // ゲーム中（追加）
-  iThinkingOf:{ja:'{icon} {name} 考え中…',en:'{icon} {name} thinking...'},
-  iPlayOf:{ja:'{icon} {name}の番だよ',en:"{icon} {name}'s turn"},
-  cancel:{ja:'✗ やめる',en:'✗ Cancel'},
+  iThinkingOf:{ja:'{icon} {name} 考え中…','ja-h':'{icon} {name} かんがえちゅう…',en:'{icon} {name} thinking...'},
+  iPlayOf:{ja:'{icon} {name}の番だよ','ja-h':'{icon} {name}のばんだよ',en:"{icon} {name}'s turn"},
+  humanLabel:{ja:'人間',en:'Human','ja-h':'にんげん'},
+  cancel:{ja:'✗ やめる','ja-h':'✗ やめる',en:'✗ Cancel'},
   ok:{ja:'✓',en:'✓'},
   ng:{ja:'✗',en:'✗'},
   // リザルト（追加）
-  dupCount:{ja:'{n}かぶり',en:'{n} dup'},
-  cornerCount:{ja:'{n}角',en:'{n} corner'},
+  dupCount:{ja:'{n}かぶり','ja-h':'{n}かぶり',en:'{n} dup'},
+  cornerCount:{ja:'{n}角','ja-h':'{n}かど',en:'{n} corner'},
   // 人数選択
-  handoff:{ja:'{name}さんに渡して',en:'Pass to {name}'},
-  tapContinue:{ja:'タップで続行',en:'Tap to continue'},
+  handoff:{ja:'{name}さんに渡して','ja-h':'{name}さんにわたして',en:'Pass to {name}'},
+  tapContinue:{ja:'タップで続行','ja-h':'タップでつづく',en:'Tap to continue'},
   // チュートリアル（ゲーム中）
-  tut1:{ja:'2vs2のリバーシにようこそ！\nさっそくやってみましょう！',en:'Welcome to 2vs2 Reversi!\nLet\'s jump right in!'},
-  tut2:{ja:'確実にひっくり返せる場所には\nこのマーカーがでるよ！',en:'Guaranteed flip spots\nare marked like this!'},
-  tutCoop:{ja:'このマークは、相棒と\n息が合えばひっくり返せる……かも？！',en:'This mark means you might\nflip if your partner syncs up!'},
-  tutDup:{ja:'おっと！同じ場所を\n選んじゃった！',en:'Oops! They picked\nthe same spot!'},
+  tut1:{ja:'2vs2のリバーシにようこそ！\nさっそくやってみましょう！','ja-h':'2vs2のリバーシにようこそ！\nさっそくやってみよう！',en:'Welcome to 2vs2 Reversi!\nLet\'s jump right in!'},
+  tut2:{ja:'確実にひっくり返せる場所には\nこのマーカーがでるよ！','ja-h':'たしかにひっくりかえせるばしょには\nこのマーカーがでるよ！',en:'Guaranteed flip spots\nare marked like this!'},
+  tutCoop:{ja:'このマークは、相棒と\n息が合えばひっくり返せる……かも？！','ja-h':'このマークは、あいぼうと\nいきがあえばひっくりかえせる……かも？！',en:'This mark means you might\nflip if your partner syncs up!'},
+  tutDup:{ja:'おっと！同じ場所を\n選んじゃった！','ja-h':'おっと！おなじばしょを\nえらんじゃった！',en:'Oops! They picked\nthe same spot!'},
   tutHelp:{ja:'❓',en:'❓'},
-  tutHelpOn:{ja:'チュートリアルON！\nゲーム中に説明がでるよ',en:'Tutorial ON!\nTips will appear in-game'},
-  tutHelpOff:{ja:'チュートリアルOFF',en:'Tutorial OFF'},
-  tutRescue:{ja:'石が全滅！救済措置で\n1つだけ自由に置けるよ\n（角はできるだけダメ！）',en:'All stones gone! You get\none free placement\n(corners blocked if possible!)'},
+  tutHelpOn:{ja:'チュートリアルON！\nゲーム中に説明がでるよ','ja-h':'チュートリアルON！\nゲームちゅうにせつめいがでるよ',en:'Tutorial ON!\nTips will appear in-game'},
+  tutHelpOff:{ja:'チュートリアルOFF','ja-h':'チュートリアルOFF',en:'Tutorial OFF'},
+  tutSecret:{ja:'チームの相方にはないしょ！
+でも相手チームは見てもOK 😏',en:'Keep it secret from your partner!
+But the other team can peek 😏','ja-h':'チームのあいぼうにはないしょ！
+でもあいてチームはみてもOK 😏'},
+  tutRescue:{ja:'石が全滅！救済措置で\n1つだけ自由に置けるよ\n（角はできるだけダメ！）','ja-h':'いしがぜんめつ！すくいのてで\n1つだけじゆうにおけるよ\n（かどはできるだけダメ！）',en:'All stones gone! You get\none free placement\n(corners blocked if possible!)'},
 };
-function T(key,vars){let s=(I18N[key]||{})[LANG]||key;if(vars)for(const[k,v]of Object.entries(vars))s=s.replace(`{${k}}`,v);return s;}
+function T(key,vars){const e=I18N[key]||{};let s=e[LANG]||(LANG==='ja-h'?e['ja']:null)||key;if(vars)for(const[k,v]of Object.entries(vars))s=s.replace(`{${k}}`,v);return s;}
 
 const EMPTY=0,BLACK=1,WHITE=2,BS=8;
 const DIRS=[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
@@ -1075,7 +1080,7 @@ class TitleScreen{
     const lnH2=isHov(langBtnX,langBtnY,langBtnW,langBtnH);
     ctx.fillStyle=lnH2?'rgba(255,255,255,0.15)':'rgba(255,255,255,0.05)';ctx.fill();
     ctx.strokeStyle=lnH2?C.gold:fgSub;ctx.lineWidth=1;ctx.stroke();
-    tt(ctx,LANG==='ja'?'EN':'JA',langBtnX+langBtnW/2,langBtnY+langBtnH/2,`${lnH2?'bold ':''}${fs*0.5}px sans-serif`,lnH2?C.gold:fgSub);
+    tt(ctx,LANG==='ja'?'EN':LANG==='en'?'あ':'漢',langBtnX+langBtnW/2,langBtnY+langBtnH/2,`${lnH2?'bold ':''}${fs*0.5}px sans-serif`,lnH2?C.gold:fgSub);
     this.btns.push({id:'lang',x:langBtnX,y:langBtnY,w:langBtnW,h:langBtnH});
     y+=fs*1.5;
 
@@ -1186,7 +1191,7 @@ class TitleScreen{
       tt(ctx,ps.name,x+fs*2,ry+fs*0.55,`${fs*0.55}px sans-serif`,C.txt,'left');
       this.btns.push({id:`n_${pi}`,x:x,y:ry,w:w*0.6,h:fs*1.2});
       // CPUボタン（右端からパディング）
-      const lbl=ps.isCPU?'CPU':'人間';const tw=fs*2.4,tx=x+w-tw-fs*0.5,ty2=ry+fs*0.08,th=fs*0.95;
+      const lbl=ps.isCPU?'CPU':T('humanLabel');const tw=fs*2.4,tx=x+w-tw-fs*0.5,ty2=ry+fs*0.08,th=fs*0.95;
       rr(ctx,tx,ty2,tw,th,5);ctx.fillStyle=ps.isCPU?'rgba(78,168,196,0.45)':'rgba(224,80,64,0.35)';ctx.fill();
       hovFx(ctx,tx,ty2,tw,th);
       tt(ctx,lbl,tx+tw/2,ry+fs*0.55,`bold ${fs*0.55}px sans-serif`,C.txt);
@@ -1599,6 +1604,14 @@ class GameScreen{
 
   _tutDismiss(){
     if(!this.tut.msg)return false;
+    // tut1の後にtutSecret（2人以上人間がいる場合）
+    if(this.tut.msg==='tut1'&&!this.tut.secretShown){
+      const humanCount=this.tm.ps.filter(p=>!p.isCPU).length;
+      if(humanCount>=2){
+        this.tut.msg='tutSecret';this.tut.t=performance.now();this.tut.secretShown=true;
+        return true;
+      }
+    }
     this.tut.msg=null;this.tut.spots=null;this.tut.t=0;
     // 全部見たらフラグ
     if(this.tut.intro&&this.tut.playShown){window._tutSeen=true;}
@@ -2029,7 +2042,7 @@ class PlayerCountScreen{
   }
   handleTap(tx,ty){
     for(const b of this.btns){if(!hit(tx,ty,b.x,b.y,b.w,b.h))continue;
-      if(b.id==='lang'){LANG=LANG==='ja'?'en':'ja';return;}
+      if(b.id==='lang'){LANG=LANG==='ja'?'en':LANG==='en'?'ja-h':'ja';return;}
       this.app.setupPlayers(b.id);return;}
   }
 }
