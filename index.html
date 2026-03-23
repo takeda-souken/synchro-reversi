@@ -37,8 +37,8 @@ const I18N={
   scatter:{ja:'スキャッター',en:'Scatter'},
   random:{ja:'ランダム',en:'Random'},
   // ゲーム中
-  thinkingOf:{ja:'{name}さん 考え中...',en:'{name} thinking...'},
-  playOf:{ja:'{name}さん 打って！',en:'{name}, your turn!'},
+  thinkingOf:{ja:'{name} 考え中…',en:'{name} thinking...'},
+  playOf:{ja:'{name}の番だよ',en:"{name}'s turn"},
   confirmQ:{ja:'ここに決定！',en:'Place here!'},
   coopWarn:{ja:'⚠ 相方と合わないと置けないかも',en:'⚠ Needs partner sync'},
   confirmHint:{ja:'他の場所タップで変更',en:'Tap elsewhere to change'},
@@ -66,9 +66,10 @@ const I18N={
   cornerLegend:{ja:'角取得',en:'Corner'},
   dupLegend:{ja:'かぶり',en:'Dup'},
   youLabel:{ja:'あなた',en:'YOU'},
+  yourTurn:{ja:'あなたの番',en:'YOUR TURN'},
   // ゲーム中（追加）
-  iThinkingOf:{ja:'{icon} {name}さん 考え中...',en:'{icon} {name} thinking...'},
-  iPlayOf:{ja:'{icon} {name}さん 打って！',en:'{icon} {name}, your turn!'},
+  iThinkingOf:{ja:'{icon} {name} 考え中…',en:'{icon} {name} thinking...'},
+  iPlayOf:{ja:'{icon} {name}の番だよ',en:"{icon} {name}'s turn"},
   cancel:{ja:'✗ やめる',en:'✗ Cancel'},
   ok:{ja:'✓',en:'✓'},
   ng:{ja:'✗',en:'✗'},
@@ -552,8 +553,8 @@ class R{
       // 波形のみで描画。残りマスが減ると波が収まる（0で直線）
       const now2=performance.now()*0.001;
       const amp=Math.min(1,cnt.e/10); // 残り10マス以下で収束開始、0で直線
-      const waveL=(i)=>(Math.sin(i/h*Math.PI*2.5+now2)*5+Math.sin(i/h*Math.PI*1.3+now2*1.7)*3)*amp;
-      const waveR=(i)=>(Math.sin(i/h*Math.PI*2.0+now2*0.8+2)*4+Math.sin(i/h*Math.PI*1.6+now2*1.3+5)*3)*amp;
+      const waveL=(i)=>(Math.sin(i/h*Math.PI*2.5+now2)*3.3+Math.sin(i/h*Math.PI*1.3+now2*1.7)*2)*amp;
+      const waveR=(i)=>(Math.sin(i/h*Math.PI*2.0+now2*0.8+2)*2.7+Math.sin(i/h*Math.PI*1.6+now2*1.3+5)*2)*amp;
       if(dleft>0.01){const mx=x+w*dleft;
         ctx.beginPath();ctx.moveTo(x,y);
         for(let i=0;i<=h;i++)ctx.lineTo(mx+waveL(i),y+i);
@@ -626,7 +627,7 @@ class TM{
       case PH.PR:if(this.cp?.isCPU)this.cpuPick();else{this.phase=PH.PS;this.msg=T('playOf',{name:this.cp.name});this.sub='';this.showB=true;}break;
       case PH.PS:if(!isB)return;{const allValid=[...this.vmS,...this.coopS];if(allValid.some(([vr,vc])=>vr===r&&vc===c)){this.sel=[r,c];this.phase=PH.PC;this.msg=T('confirmQ');this.sub=this.coopS.some(([vr,vc])=>vr===r&&vc===c)?T('coopWarn'):'';}}break;
       case PH.PC:if(isB){const allValid=[...this.vmS,...this.coopS];if(allValid.some(([vr,vc])=>vr===r&&vc===c)){this.sel=[r,c];this.sub=this.coopS.some(([vr,vc])=>vr===r&&vc===c)?T('coopWarn'):'';}}break;
-      case PH.HO:{const cp2=this.cp;if(cp2){this.phase=PH.PS;this.msg=`${cp2.icon} ${cp2.name} 打って！`;this.sub='';this.showB=true;}break;}
+      case PH.HO:{const cp2=this.cp;if(cp2){this.phase=PH.PS;this.msg=T('iPlayOf',{icon:cp2.icon,name:cp2.name});this.sub='';this.showB=true;}break;}
       case PH.TE:this.nextTeam();break;
       case PH.PA:this.nextTeam();break;
     }
@@ -1131,7 +1132,7 @@ class GameScreen{
   // プレイヤーパネル: アイコン→改行→名前（中央寄せ）
   _drawPlayer(ctx,p,pos,pw,ph,fs,isActive,iCol,isYou=false,stoneCol=BLACK,isTeamTurn=false,isDone=false){
     // 「あなた」ラベル（パネルの上）
-    const isBot=pos.y>this.oy+this.cs*BS/2;if(isYou)tt(ctx,T('youLabel'),pos.x+pw/2,isBot?pos.y+ph+fs*0.55:pos.y-fs*0.45,`bold ${fs*0.55}px sans-serif`,C.gold);
+    const isBot=pos.y>this.oy+this.cs*BS/2;if(isYou){const isTurn=this.tm&&this.tm.cp===p;const lbl=isTurn?T('yourTurn'):T('youLabel');tt(ctx,lbl,pos.x+pw/2,isBot?pos.y+ph+fs*0.55:pos.y-fs*0.45,`bold ${fs*0.55}px sans-serif`,isTurn?'#ffcc44':C.gold);}
     const isBlack=stoneCol===BLACK;
     // 3段階: アクティブ > チームの番 > 非アクティブ
     const bgNorm=isBlack?'rgba(20,20,20,0.3)':'rgba(240,239,232,0.5)';
