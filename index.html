@@ -108,10 +108,10 @@ const LAYOUTS={
   parallel:[[3,3,BLACK],[3,4,WHITE],[4,3,BLACK],[4,4,WHITE]],
   diamond:[[1,3,BLACK],[1,4,WHITE],[3,1,WHITE],[3,6,BLACK],[4,1,BLACK],[4,6,WHITE],[6,3,WHITE],[6,4,BLACK]],
   scatter:[[1,1,BLACK],[1,6,WHITE],[2,4,BLACK],[3,2,WHITE],[4,5,BLACK],[5,3,WHITE],[6,1,BLACK],[6,6,WHITE]],
-  random:null,
+  ランダム:null,
 };
 const LKEYS=Object.keys(LAYOUTS);
-const LNAMES={standard:'standard',parallel:'parallel',diamond:'diamond',scatter:'scatter',random:'random'};
+const LNAMES={standard:'standard',parallel:'parallel',diamond:'diamond',scatter:'scatter',ランダム:'random'};
 
 const C={bg:'#1a5c32',bgNeutral:'#2a2a2e',boardBg:'#2d8a4e',grid:'#1a5c32',
   // 戦況背景色（RGB値）: 黒チーム=暗い赤黒, 白チーム=明るい白青
@@ -689,7 +689,7 @@ class TM{
         this.phase=PH.PS;this.msg=T('iPlayOf',{icon:np.icon,name:np.name});this.sub='';this.showB=true;
       }}
     else{this.p2=mv;this._p2Coop=this._coopBet;this.doReveal();}}
-  confirm(){if(this.pi===0){this.p1=this.sel;this.sel=null;this.pi=1;const np=this.tPs[1];if(np.isCPU){this.msg=T('thinkingOf',{name:np.name});this.showB=true;setTimeout(()=>this.cpuPick(),(300+Math.random()*300)/this.spd);}
+  confirm(){if(!this.sel)return;if(this.pi===0){this.p1=this.sel;this.sel=null;this.pi=1;const np=this.tPs[1];if(np.isCPU){this.msg=T('thinkingOf',{name:np.name});this.showB=true;setTimeout(()=>this.cpuPick(),(300+Math.random()*300)/this.spd);}
       else{
         // 人間→人間: チーム内人間2人の時だけ渡し画面
         const humanInTeam=this.tPs.filter(p=>!p.isCPU).length;
