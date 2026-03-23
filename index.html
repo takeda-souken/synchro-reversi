@@ -442,6 +442,27 @@ class Board{
   place(r,c,col){const f=this.flips(r,c,col);this.cells[r][c]=col;for(const[fr,fc]of f)this.cells[fr][fc]=col;return f;}
   cnt(){let b=0,w=0,e=0;for(let r=0;r<BS;r++)for(let c=0;c<BS;c++){const v=this.cells[r][c];v===BLACK?b++:v===WHITE?w++:e++;}return{b,w,e};}
   isCorner(r,c){return(r===0||r===7)&&(c===0||c===7);}
+  // 確定マス判定: どちらの色にもフリップされ得ないマスを返す
+  lockedCells(){
+    const locked=new Int8Array(BS*BS); // 0=not locked, 1=locked black, 2=locked white
+    // 各色の合法手からフリップされ得るマスを列挙
+    const flippable=new Set();
+    for(const col of[BLACK,WHITE]){
+      for(let r=0;r<BS;r++)for(let c=0;c<BS;c++){
+        if(this.cells[r][c]!==EMPTY)continue;
+        const fl=this.flips(r,c,col);
+        for(const[fr,fc]of fl)flippable.add(fr*BS+fc);
+      }
+    }
+    // 石が置かれていて、かつフリップされ得ないマスが確定
+    for(let r=0;r<BS;r++)for(let c=0;c<BS;c++){
+      const v=this.cells[r][c];
+      if(v!==EMPTY&&!flippable.has(r*BS+c)){
+        locked[r*BS+c]=v===BLACK?1:2;
+      }
+    }
+    return locked;
+  }
   // 重み付きスコア
   wScore(){let bs=0,ws=0;for(let r=0;r<BS;r++)for(let c=0;c<BS;c++){const v=this.cells[r][c];if(!v)continue;let wt=1;const edge=r===0||r===7||c===0||c===7;const corner=(r===0||r===7)&&(c===0||c===7);if(corner)wt=5;else if(edge)wt=2;v===BLACK?bs+=wt:ws+=wt;}return{bs,ws};}
 }
@@ -458,6 +479,12 @@ class R{
     ctx.strokeStyle=C.grid;ctx.lineWidth=1;
     for(let i=0;i<=BS;i++){ctx.beginPath();ctx.moveTo(ox+i*cs,oy);ctx.lineTo(ox+i*cs,oy+sz);ctx.stroke();ctx.beginPath();ctx.moveTo(ox,oy+i*cs);ctx.lineTo(ox+sz,oy+i*cs);ctx.stroke();}
     ctx.fillStyle=C.grid;for(const[r,c]of[[2,2],[2,6],[6,2],[6,6]]){ctx.beginPath();ctx.arc(ox+c*cs,oy+r*cs,3,0,Math.PI*2);ctx.fill();}
+    // 確定マスの可視化: 薄い色付け
+    if(o.locked){for(let r=0;r<BS;r++)for(let c=0;c<BS;c++){
+      const lv=o.locked[r*BS+c];
+      if(lv===1){ctx.fillStyle='rgba(30,30,30,0.08)';ctx.fillRect(ox+c*cs+1,oy+r*cs+1,cs-2,cs-2);}
+      else if(lv===2){ctx.fillStyle='rgba(240,235,220,0.08)';ctx.fillRect(ox+c*cs+1,oy+r*cs+1,cs-2,cs-2);}
+    }}
     // 合法手: コマサイズの半透明塗りつぶし明滅（確定候補と一目で区別）
     if(o.vm){const t=performance.now()/300;const pulse=0.15+0.12*Math.sin(t);
       const app=window._app;const hr=app?Math.floor((app.hoverY-oy)/cs):-1;const hc=app?Math.floor((app.hoverX-ox)/cs):-1;
@@ -1305,7 +1332,7 @@ class GameScreen{
       let sx=0,sy=0;
       if(this.shakeT>0){const el=performance.now()-this.shakeT;if(el<500){const i2=(1-el/500)*8;sx=Math.sin(el*0.05)*i2;sy=Math.cos(el*0.07)*i2;}else this.shakeT=0;}
       const showVM=ph===PH.PS||ph===PH.PC;
-      this.ren.board(this.bd,this.ox+sx,this.oy+sy,this.cs,{
+      const _locked=this.bd.lockedCells();this.ren.board(this.bd,this.ox+sx,this.oy+sy,this.cs,{locked:_locked,
         vm:showVM?this.tm.vmS||this.tm.vm:null,
         coopM:showVM?this.tm.coopS:null,
         sel:this.tm.sel,
