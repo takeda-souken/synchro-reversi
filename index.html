@@ -42,6 +42,10 @@ const I18N={
   confirmQ:{ja:'ここに決定！',en:'Place here!'},
   coopWarn:{ja:'⚠ 相方と合わないと置けないかも',en:'⚠ Needs partner sync'},
   confirmHint:{ja:'他の場所タップで変更',en:'Tap elsewhere to change'},
+  homeConfirm:{ja:'ホームに戻る？',en:'Return home?'},
+  homeConfirmSub:{ja:'中断すると今のゲームは消えるよ',en:'Current game will be lost'},
+  homeYes:{ja:'戻る',en:'Leave'},
+  homeNo:{ja:'続ける',en:'Stay'},
   teamThinking:{ja:'{i1}{i2} 考え中…',en:'{i1}{i2} thinking…'},
   teamDecided:{ja:'{i1}{i2} 決定！',en:'{i1}{i2} decided!'},
   gameStart:{ja:'🎮 開始！',en:'🎮 START!'},
@@ -1627,12 +1631,26 @@ class GameScreen{
     if(this.tm.phase===PH.AN)this.tm.updateAnim(now);
   }
   handleTap(tx,ty){
+    // ホーム遷移確認オーバーレイ
+    if(this._homeConfirm){
+      ctx.fillStyle='rgba(80,80,80,0.85)';ctx.fillRect(0,0,W,H);
+      const dlgW=Math.min(eW*0.8,320),dlgH=fs*7,dlgX=cx-dlgW/2,dlgY=H/2-dlgH/2;
+      rr(ctx,dlgX,dlgY,dlgW,dlgH,12);ctx.fillStyle='#2a2a2a';ctx.fill();ctx.strokeStyle='rgba(255,255,255,0.15)';ctx.lineWidth=1;ctx.stroke();
+      tt(ctx,T('homeConfirm'),cx,dlgY+fs*1.5,`bold ${fs*0.7}px sans-serif`,'#fff');
+      tt(ctx,T('homeConfirmSub'),cx,dlgY+fs*2.5,`${fs*0.5}px sans-serif`,C.sub);
+      const btnW2=dlgW*0.35,btnH2=fs*1.5,btnY2=dlgY+dlgH-fs*2.3,gap4=fs*0.4;
+      drawBtn(ctx,T('homeYes'),cx-btnW2-gap4/2,btnY2,btnW2,btnH2,'#c04040','#fff');
+      this.btns.push({id:'homeYes',x:cx-btnW2-gap4/2,y:btnY2,w:btnW2,h:btnH2});
+      drawBtn(ctx,T('homeNo'),cx+gap4/2,btnY2,btnW2,btnH2,'#2d9e5f','#fff');
+      this.btns.push({id:'homeNo',x:cx+gap4/2,y:btnY2,w:btnW2,h:btnH2});
+    }
     // チュートリアル表示中: タップで閉じる（ゲーム操作を無視）
+    if(this._homeConfirm){for(const b of this.btns){if(!hit(tx,ty,b.x,b.y,b.w,b.h))continue;if(b.id==='homeYes'){this.app.showTitle();return;}if(b.id==='homeNo'){this._homeConfirm=false;return;}}return;}
     if(this._tutDismiss())return;
     for(const b of this.btns){if(!hit(tx,ty,b.x,b.y,b.w,b.h))continue;
       if(b.id==='ok'){this.tm.confirm();return;}if(b.id==='ng'){this.tm.cancel();return;}
       if(b.id==='res'){this.app.showResult(this.bd,this.tm.log,this.tm.hist,this.tm.bds,this.tm.ps,this.tm.swap);return;}
-      if(b.id==='home'){this.app.showTitle();return;}
+      if(b.id==='home'){this._homeConfirm=true;return;}if(b.id==='homeYes'){this.app.showTitle();return;}if(b.id==='homeNo'){this._homeConfirm=false;return;}
       if(b.id==='spd'){const v=[0.5,1,2,4,8];const ci=v.indexOf(this.tm.spd);this.tm.spd=v[(ci+1)%v.length];return;}
       return;}
     if(this.tm.phase===PH.GO)return;
