@@ -458,18 +458,21 @@ class R{
     ctx.strokeStyle=C.grid;ctx.lineWidth=1;
     for(let i=0;i<=BS;i++){ctx.beginPath();ctx.moveTo(ox+i*cs,oy);ctx.lineTo(ox+i*cs,oy+sz);ctx.stroke();ctx.beginPath();ctx.moveTo(ox,oy+i*cs);ctx.lineTo(ox+sz,oy+i*cs);ctx.stroke();}
     ctx.fillStyle=C.grid;for(const[r,c]of[[2,2],[2,6],[6,2],[6,6]]){ctx.beginPath();ctx.arc(ox+c*cs,oy+r*cs,3,0,Math.PI*2);ctx.fill();}
-    // 合法手: 明滅ドット（大きめ・濃いめ）
-    if(o.vm){const t=performance.now()/300;const pulse=0.5+0.3*Math.sin(t);const baseSz=cs*0.18+cs*0.05*Math.sin(t*1.33);
+    // 合法手: コマサイズの半透明塗りつぶし明滅（確定候補と一目で区別）
+    if(o.vm){const t=performance.now()/300;const pulse=0.15+0.12*Math.sin(t);
       const app=window._app;const hr=app?Math.floor((app.hoverY-oy)/cs):-1;const hc=app?Math.floor((app.hoverX-ox)/cs):-1;
       const selR=o.sel?o.sel[0]:-1,selC=o.sel?o.sel[1]:-1;
       for(const[r,c]of o.vm){
         if(r===selR&&c===selC)continue;
         const cx2=ox+c*cs+cs/2,cy2=oy+r*cs+cs/2;
-        const hovered=r===hr&&c===hc;const sz=hovered?cs*0.28:baseSz;const al=hovered?0.85:pulse;
-        ctx.beginPath();ctx.arc(cx2,cy2,sz,0,Math.PI*2);ctx.fillStyle=`rgba(212,168,67,${al})`;ctx.fill();
-        if(hovered){ctx.strokeStyle='rgba(212,168,67,0.6)';ctx.lineWidth=2;ctx.stroke();}}}
-    // 協力候補: 確定より少し小さめのドット＋リング（区別しやすく）
-    if(o.coopM){const t2=performance.now()/300;const pulse2=0.35+0.2*Math.sin(t2);const sz2=cs*0.12+cs*0.03*Math.sin(t2*1.33);
+        const hovered=r===hr&&c===hc;
+        const al=hovered?0.4:pulse;const rad=cs*0.38;
+        ctx.beginPath();ctx.arc(cx2,cy2,rad,0,Math.PI*2);ctx.fillStyle=`rgba(212,168,67,${al})`;ctx.fill();
+        ctx.strokeStyle=`rgba(212,168,67,${al+0.15})`;ctx.lineWidth=2;ctx.stroke();
+        // 中心ドット
+        ctx.beginPath();ctx.arc(cx2,cy2,cs*0.08,0,Math.PI*2);ctx.fillStyle=`rgba(212,168,67,${al+0.3})`;ctx.fill();}}
+    // 協力候補: 小さいリング＋破線（確定候補と逆位相で明滅）
+    if(o.coopM){const t2=performance.now()/300;const pulse2=0.2+0.15*Math.cos(t2);const sz2=cs*0.1+cs*0.02*Math.cos(t2*1.33);
       const app2=window._app;const hr2=app2?Math.floor((app2.hoverY-oy)/cs):-1;const hc2=app2?Math.floor((app2.hoverX-ox)/cs):-1;
       const selR2=o.sel?o.sel[0]:-1,selC2=o.sel?o.sel[1]:-1;
       for(const[r,c]of o.coopM){if(r===selR2&&c===selC2)continue;
