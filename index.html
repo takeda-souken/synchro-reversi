@@ -578,6 +578,62 @@ class R{
   mini(layout,x,y,sz){const ctx=this.ctx,cs=sz/BS;rr(ctx,x-2,y-2,sz+4,sz+4,3);ctx.fillStyle=C.boardBg;ctx.fill();ctx.strokeStyle=C.grid;ctx.lineWidth=0.5;for(let i=0;i<=BS;i++){ctx.beginPath();ctx.moveTo(x+i*cs,y);ctx.lineTo(x+i*cs,y+sz);ctx.stroke();ctx.beginPath();ctx.moveTo(x,y+i*cs);ctx.lineTo(x+sz,y+i*cs);ctx.stroke();}if(!layout)return;for(const[r,c,v]of layout){ctx.beginPath();ctx.arc(x+c*cs+cs/2,y+r*cs+cs/2,cs*0.35,0,Math.PI*2);ctx.fillStyle=v===BLACK?C.black:C.white;ctx.fill();}}
 }
 
+
+// セリフv2: 手の評価関数
+function evalMove(bd,r,c,col,otherR,otherC,coopBet){
+  const isCorner=bd.isCorner(r,c);
+  const tmp=new Board();for(let i=0;i<BS;i++)tmp.cells[i]=new Int8Array(bd.cells[i]);
+  if(otherR!=null)tmp.cells[otherR][otherC]=col;
+  const flips=tmp.flips(r,c,col).length;
+  if(isCorner) return{grade:'CORNER',flips};
+  if(coopBet&&flips===0) return{grade:'COOP_FAIL',flips};
+  if(coopBet&&flips>0) return{grade:'COOP_OK',flips};
+  if(flips>=3) return{grade:'BIG',flips};
+  if(flips>0) return{grade:'NORMAL',flips};
+  return{grade:'MISS',flips:0};
+}
+function comboCategory(g1,g2){
+  const s=new Set([g1,g2]);
+  if(s.has('CORNER')&&s.size===1) return 'BOTH_CORNER';
+  if(s.has('CORNER')) return 'CORNER_GOOD';
+  if(s.has('COOP_OK')) return 'COOP_SUCCESS';
+  if(g1==='BIG'&&g2==='BIG') return 'BOTH_BIG';
+  if(s.has('BIG')&&(s.has('NORMAL')||s.size===1)) return 'BIG_NORMAL';
+  if((s.has('COOP_FAIL')||s.has('MISS'))&&(s.has('CORNER')||s.has('BIG'))) return 'GOOD_FAIL';
+  if((s.has('COOP_FAIL')||s.has('MISS'))&&s.has('NORMAL')) return 'NORMAL_FAIL';
+  if((s.has('COOP_FAIL')||s.has('MISS'))&&(s.has('COOP_FAIL')||s.has('MISS'))) return 'BOTH_FAIL';
+  return 'BOTH_NORMAL';
+}
+const SV2={
+  BOTH_CORNER:[['角ダブル！！','最強の布陣！'],['両方角！？','神ってる！'],['角取り合戦！','完勝！'],['これは…勝ったやろ','油断禁物！'],['角2つ！！','うひょ〜！']],
+  CORNER_GOOD:[['わかってるじゃん〜','へへ、任せて'],['角いただき！','ナイスカバー！'],['さすが！','あんたこそ！'],['角キター！','そこ攻めるの正解'],['大きい！','角が全てを変える'],['角取ったー！','いい流れ！'],['ここ取れたの大きい！','つなげるよ！'],['角確保！','完璧な分担！']],
+  BOTH_BIG:[['攻守完璧！','阿吽の呼吸！'],['ガッツリ！','ごっそり！'],['大漁大漁！','豊作！'],['すごい返した！','うちも！'],['二面作戦成功！','挟み撃ち！']],
+  BIG_NORMAL:[['ナイス！','まぁまぁかな'],['いい手！','地道にいくよ'],['ガッツリいった！','着実着実'],['大きい！','うちも頑張る'],['さすが！','次はうちの番'],['攻めるね〜','守りも大事やけん'],['流れ来てる！','畳みかけよう！'],['外周キープ！','端っこ大事']],
+  BOTH_NORMAL:[['まぁまぁかな','地道にいこ'],['うんうん','焦らずね'],['着実着実','一歩ずつ'],['悪くないよ','うん、悪くない'],['ふむふむ','次がポイントかな'],['このペースで','了解！'],['落ち着いていこう','そうそう'],['安定安定','コツコツね'],['堅実やね','堅実が一番'],['まずまず','次こそ大きく！']],
+  GOOD_FAIL:[['え、そっち…？','ごめんて…'],['どんまい！','うぅ…'],['カバーしたから大丈夫！','ありがとう…'],['大丈夫大丈夫','次で取り返す！'],['うちが稼いだから！','助かった…'],['片方は大きかった！','すまん…'],['フォローするって！','頼む…'],['リカバリーOK！','感謝…']],
+  NORMAL_FAIL:[['あちゃー…','ごめん…'],['うーん、しゃーない','次がんばる…'],['まぁそういう時もある','うん…'],['ドンマイドンマイ','ありがと…'],['切り替えてこ！','そうだね…'],['惜しかった…','くぅ…'],['次で巻き返そう','了解…'],['リベンジするぞ！','うん！']],
+  BOTH_FAIL:[['うわぁ…','どうしてこうなった…'],['まずい…','ヤバい…'],['え、二人とも…？','信じられない…'],['これは痛い…','立て直さないと…'],['最悪の展開…','泣きそう…']],
+  COOP_SUCCESS:[['読めてた！！','最高かよ！'],['シンクロ！！','通じ合った！'],['作戦通り！','完璧！'],['息ぴったり！','テレパシー！'],['やった！通った！','信じてた！'],['大勝負に勝った！','震える…！'],['ナイスコンビネーション！','最強タッグ！'],['賭けが当たった！','勝負師！']],
+};
+const SV2_EN={
+  BOTH_CORNER:[['Double corner!!','Unstoppable!'],['Both corners!?','Insane!'],['Corner blitz!','Total domination!'],['Game over for them!','Stay focused!'],['Two corners!!','YESSS!']],
+  CORNER_GOOD:[['You get it~','Heh, easy'],['Corner secured!','Nice backup!'],['Amazing!','Right back at ya!'],['CORNER!','Game changer!'],['Huge!','Everything changes now'],['Got the corner!','Great flow!'],['Big pickup!','Connecting!'],['Corner locked!','Perfect split!']],
+  BOTH_BIG:[['Flawless!','In sync!'],['Massive!','Cleaned up!'],['Huge haul!','Jackpot!'],['So many flips!','Same here!'],['Pincer attack!','Surrounded!']],
+  BIG_NORMAL:[['Nice!','Not bad I guess'],['Great move!','Slow and steady'],['Big flip!','Solid solid'],['Huge!','My turn to shine next'],['Amazing!','My turn next'],['Aggressive~','Defense matters too'],['Momentum!','Keep pushing!'],['Edge control!','Edges are key']],
+  BOTH_NORMAL:[['Not bad','Steady wins'],['Mm-hm','No rush'],['Step by step','One at a time'],['Decent','Yeah decent'],['Hmm','Next move is key'],['This pace is good','Roger!'],['Stay calm','Exactly'],['Stable','Consistency is king'],['Solid','Solid indeed'],['Okay okay','Next one big!']],
+  GOOD_FAIL:[['Wait there...?','Sorry...'],['No worries!','Ugh...'],['I covered it!','Thanks...'],['All good!','Will make up for it!'],['I got the big one!','Saved me...'],['One worked out!','My bad...'],['Got your back!','Please...'],['Recovery!','Grateful...']],
+  NORMAL_FAIL:[['Oops...','Sorry...'],['Well it happens','Will try harder...'],['These things happen','Yeah...'],['No worries!','Thanks...'],['Moving on!','Right...'],['Close one...','Argh...'],['Bounce back time!','Roger...'],['Revenge time!','Yeah!']],
+  BOTH_FAIL:[['Oh no...','How did this happen...'],['This is bad...','Really bad...'],['Both of us...?','Unbelievable...'],['That hurts...','Gotta regroup...'],['Worst case...','Could cry...']],
+  COOP_SUCCESS:[['Called it!!','AMAZING!'],['SYNC!!','Connected!'],['As planned!','Perfect!'],['In sync!','Telepathy!'],['It worked!!','I believed!'],['Big gamble paid off!','Shaking!'],['COMBO!','Best team!'],['The bet paid off!','What a play!']],
+};
+const DUP_WE=[['かぶっちゃった…','ごめんて！'],['同じとこ…','考えること同じか…'],['あぁぁぁ','もったいない…'],['読みが被った…','だよね…そこだよね'],['シンクロしちゃった…','してる場合か！'],['えぇぇ！？','こっちのセリフ！'],['なんでそこ！？','なんでそっち！？'],['うわぁ','あちゃー'],['やらかした…','どっちもね'],['1個損した！','取り返そ！']];
+const DUP_THEY=[['やった！相手かぶった！','チャンス！'],['あ、向こうかぶってる','ラッキー！'],['敵がシンクロしてるｗ','もらった！'],['向こうミスった！','ここで攻める！'],['かぶってくれた！','助かる〜'],['相手が被ったぞ！','好機！'],['ｗｗｗ','笑っちゃダメだけどｗ'],['そっちかぶりか〜','ありがたい'],['敵さん息ぴったりやん','こっちの得！'],['もったいないことしてる〜','うちらはしないようにね']];
+const DUP_WE_EN=[['We overlapped...','My bad!'],['Same spot...','Great minds?'],['Nooo','Such a waste...'],['Our reads collided...','Right? THE spot'],['We synced up...','Wrong time!'],['WHAT!?','MY line!'],['Why THERE!?','Why THAT!?'],['Ugh','Welp...'],['Blew it...','Both of us yeah'],['Wasted a turn!','Recovery time!']];
+const DUP_THEY_EN=[['They overlapped!','Our chance!'],['Oh they collided','Lucky us!'],['Enemy sync lol','Free real estate!'],['They messed up!','Attack now!'],['They collided!','Thank goodness~'],['They overlapped!','Opportunity!'],['lol','Ha!'],['They synced up~','Lucky break'],['Opponents in perfect sync','Works for us!'],['Wasting moves~','Noted!']];
+function LSV2(){return LANG==='en'?SV2_EN:SV2;}
+function LDUP_WE(){return LANG==='en'?DUP_WE_EN:DUP_WE;}
+function LDUP_THEY(){return LANG==='en'?DUP_THEY_EN:DUP_THEY;}
+
 // TurnManager（フェーズ管理）
 const PH={ST:'ST',TA:'TA',PR:'PR',PS:'PS',PC:'PC',HO:'HO',RV:'RV',AN:'AN',TE:'TE',GO:'GO',PA:'PA'};
 
@@ -714,35 +770,38 @@ class TM{
     this.rev=[{cell:this.p1,icon:tp[0].icon}];
     if(!d)this.rev.push({cell:this.p2,icon:tp[1].icon});
     this.dupC=d?{i1:tp[0].icon,i2:tp[1].icon,cell:this.p1}:null;
-    // セリフ選択（状況に応じて）
+    // セリフv2: 二人の手の組み合わせで分岐（全員喋る）
     this.bubs=[];
-    const cpus=tp.filter(p=>p.isCPU);
-    if(cpus.length>=1){
+    {
       let pair;
-      const tc2=this.teamCnt();const diff=tc2.a-tc2.b;const isLosing=(this.ti===0&&diff<-10)||(this.ti===1&&diff>10);
+      const tc2=this.teamCnt();const diff=tc2.a-tc2.b;
+      const isLosing=(this.ti===0&&diff<-10)||(this.ti===1&&diff>10);
       const isWinning=(this.ti===0&&diff>10)||(this.ti===1&&diff<-10);
-      const isLate=tc2.e<20;const isCorner=d?this.bd.isCorner(this.p1[0],this.p1[1]):false;
-      const anyCoopBet=this._p1Coop||this._p2Coop;
-      if(anyCoopBet&&cpus.length>=2)pair=pk(LCO()); // 協力候補に賭けた！
-      else if(d&&this.turnNum<=1)pair=pk(LSI().earlyDupe);
-      else if(!d&&isCorner)pair=pk(LSI().cornerGet);
-      else if(isLate&&isWinning)pair=pk(LSI().winning);
-      else if(isLate&&isLosing)pair=pk(LSI().losing);
-      else if(isLate)pair=pk(LSI().lateGame);
-      else{
-        // 重複防止: 使用済みセットから除外して選ぶ。全部使い切ったらリセット
-        const pool=d?LD():LN();
-        const used=d?this._usedD:this._usedN;
-        if(used.size>=pool.length)used.clear();
-        const avail=pool.filter((_,i)=>!used.has(i));
-        const idx=Math.floor(Math.random()*avail.length);
-        pair=avail[idx];used.add(pool.indexOf(pair));
-      }
-      this.lastLine=pair;
-      // かぶり時は衝突(700ms)の後にセリフを出す
+      const isLate=tc2.e<20;
       const baseDelay=d?1800:1000;
-      if(cpus.length>=2){this.bubs=[{icon:tp[0].icon,text:pair[0],corner:this.ps.indexOf(tp[0]),delay:baseDelay},{icon:tp[1].icon,text:pair[1],corner:this.ps.indexOf(tp[1]),delay:baseDelay+300}];}
-      else{const ci=tp.indexOf(cpus[0]);this.bubs=[{icon:cpus[0].icon,text:pair[ci],corner:this.ps.indexOf(cpus[0]),delay:baseDelay}];}
+      if(d&&this.turnNum<=1) pair=pk(LSI().earlyDupe);
+      else if(isLate&&isWinning) pair=pk(LSI().winning);
+      else if(isLate&&isLosing) pair=pk(LSI().losing);
+      else if(isLate) pair=pk(LSI().lateGame);
+      else if(d){
+        pair=pk(LDUP_WE());
+        const oppTeam=this.team==='A'?'B':'A';
+        const oppPs=this.ps.filter(p=>p.team===oppTeam);
+        const oppPair=pk(LDUP_THEY());
+        if(oppPs.length>=2){
+          this.bubs.push({icon:oppPs[0].icon,text:oppPair[0],corner:this.ps.indexOf(oppPs[0]),delay:baseDelay+600});
+          this.bubs.push({icon:oppPs[1].icon,text:oppPair[1],corner:this.ps.indexOf(oppPs[1]),delay:baseDelay+900});
+        }
+      }else{
+        const e1=evalMove(this.bS,this.p1[0],this.p1[1],this.tCol,this.p2[0],this.p2[1],this._p1Coop);
+        const e2=evalMove(this.bS,this.p2[0],this.p2[1],this.tCol,this.p1[0],this.p1[1],this._p2Coop);
+        const cat=comboCategory(e1.grade,e2.grade);
+        pair=pk(LSV2()[cat]||LSV2().BOTH_NORMAL);
+      }
+      if(!pair) pair=pk(LSV2().BOTH_NORMAL);
+      this.lastLine=pair;
+      this.bubs.push({icon:tp[0].icon,text:pair[0],corner:this.ps.indexOf(tp[0]),delay:baseDelay});
+      this.bubs.push({icon:tp[1].icon,text:pair[1],corner:this.ps.indexOf(tp[1]),delay:baseDelay+300});
     }
     this.bMsg=d?T('crashed'):T('opened');
     this.bSub=d?(this._dupSeen?'':T('crashedSub')):T('openedSub');if(d)this._dupSeen=true;
