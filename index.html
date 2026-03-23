@@ -619,8 +619,14 @@ class R{
     const fs=h*0.55;
     tt(ctx,`${Math.round(leftPct*100)}%`,x+8,y+h/2,`bold ${fs}px sans-serif`,C.tA,'left');
     tt(ctx,`${Math.round(rightPct*100)}%`,x+w-8,y+h/2,`bold ${fs}px sans-serif`,C.tB,'right');
-    tt(ctx,`${leftNum}`,x-fs*0.3,y+h/2,`bold ${h*0.7}px sans-serif`,C.gold,'right');
-    tt(ctx,`${rightNum}`,x+w+fs*0.3,y+h/2,`bold ${h*0.7}px sans-serif`,C.gold,'left');
+    // 石数: コマグラフィック上に反対色で表示
+    const stR=h*0.45;const stFs=h*0.5;
+    const lStoneCol=swap?WHITE:BLACK,rStoneCol=swap?BLACK:WHITE;
+    const lTxtCol=swap?'#1a1a1a':'#f0efe8',rTxtCol=swap?'#f0efe8':'#1a1a1a';
+    this.stone(x-stR-2,y+h/2,stR,lStoneCol);
+    tt(ctx,`${leftNum}`,x-stR-2,y+h/2,`bold ${stFs}px sans-serif`,lTxtCol);
+    this.stone(x+w+stR+2,y+h/2,stR,rStoneCol);
+    tt(ctx,`${rightNum}`,x+w+stR+2,y+h/2,`bold ${stFs}px sans-serif`,rTxtCol);
   }
   mini(layout,x,y,sz){const ctx=this.ctx,cs=sz/BS;rr(ctx,x-2,y-2,sz+4,sz+4,3);ctx.fillStyle=C.boardBg;ctx.fill();ctx.strokeStyle=C.grid;ctx.lineWidth=0.5;for(let i=0;i<=BS;i++){ctx.beginPath();ctx.moveTo(x+i*cs,y);ctx.lineTo(x+i*cs,y+sz);ctx.stroke();ctx.beginPath();ctx.moveTo(x,y+i*cs);ctx.lineTo(x+sz,y+i*cs);ctx.stroke();}if(!layout)return;for(const[r,c,v]of layout){ctx.beginPath();ctx.arc(x+c*cs+cs/2,y+r*cs+cs/2,cs*0.35,0,Math.PI*2);ctx.fillStyle=v===BLACK?C.black:C.white;ctx.fill();}}
 }
