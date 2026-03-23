@@ -482,7 +482,7 @@ class R{
         // リング（協力マーク）
         ctx.beginPath();ctx.arc(cx2,cy2,sz3+cs*0.04,0,Math.PI*2);ctx.strokeStyle=`rgba(212,168,67,${pulse2})`;ctx.lineWidth=1.5;ctx.setLineDash([3,3]);ctx.stroke();ctx.setLineDash([]);
       }}
-    if(o.sel){const[r,c]=o.sel;ctx.fillStyle=C.sel;ctx.fillRect(ox+c*cs+1,oy+r*cs+1,cs-2,cs-2);const sx=ox+c*cs+cs/2,sy=oy+r*cs+cs/2,sr=cs*0.25;const st=performance.now()/800;const spin=Math.floor(st)%2===0?((st%1)*Math.PI*2):(0);ctx.save();ctx.translate(sx,sy);ctx.rotate(spin);ctx.beginPath();for(let i=0;i<5;i++){const a=i*Math.PI*2/5-Math.PI/2;const a2=a+Math.PI/5;ctx.lineTo(Math.cos(a)*sr,Math.sin(a)*sr);ctx.lineTo(Math.cos(a2)*sr*0.4,Math.sin(a2)*sr*0.4);}ctx.closePath();ctx.fillStyle=C.gold;ctx.globalAlpha=0.9;ctx.fill();ctx.restore();}
+    if(o.sel){const[r,c]=o.sel;ctx.fillStyle=C.sel;ctx.fillRect(ox+c*cs+1,oy+r*cs+1,cs-2,cs-2);const sx=ox+c*cs+cs/2,sy=oy+r*cs+cs/2,sr=cs*0.25;const st=performance.now()/1200;const cycle=st%1;const spinning=Math.floor(st)%2===0;const ease=spinning?(cycle<0.7?cycle/0.7:1.0-(cycle-0.7)/0.3*0.0):0;const spin=spinning?(ease*ease*Math.PI*4):(0);ctx.save();ctx.translate(sx,sy);ctx.rotate(spin);ctx.beginPath();for(let i=0;i<5;i++){const a=i*Math.PI*2/5-Math.PI/2;const a2=a+Math.PI/5;ctx.lineTo(Math.cos(a)*sr,Math.sin(a)*sr);ctx.lineTo(Math.cos(a2)*sr*0.4,Math.sin(a2)*sr*0.4);}ctx.closePath();ctx.fillStyle=C.gold;ctx.globalAlpha=0.9;ctx.fill();ctx.restore();}
     // 反転プレビュー: ひっくり返る石を薄くハイライト
     if(o.flipPreview)for(const[r,c]of o.flipPreview){ctx.fillStyle='rgba(212,168,67,0.25)';ctx.fillRect(ox+c*cs+1,oy+r*cs+1,cs-2,cs-2);}
     if(o.reveal){const now=performance.now();for(const{cell,icon}of o.reveal){const[r,c]=cell;const p=0.3+0.2*Math.sin(now/150);ctx.fillStyle=`rgba(212,168,67,${p})`;ctx.fillRect(ox+c*cs+1,oy+r*cs+1,cs-2,cs-2);tt(ctx,icon,ox+c*cs+cs/2,oy+r*cs+cs/2,`${cs*0.5}px sans-serif`,'rgba(255,255,255,0.9)');}}
@@ -586,7 +586,7 @@ class TM{
     this.ps=ps;this.bd=bd;this.spd=spd;this.swap=swap;this.ti=swap?1:0;this.pi=0;this.phase=PH.ST;
     this.p1=null;this.p2=null;this.vm=[];this.vmS=null;this.coopS=[];this.bS=null;
     this.cP=0;this.anims=[];this.animT=0;this.revT=0;
-    this.msg='';this.sub='';this.bMsg='';this.bSub='';this.showB=true;this.sel=null;this.rev=null;this.dup=false;this.dupC=null;
+    this.msg='';this.sub='';this.bMsg='';this.bSub='';this.showB=true;this.sel=null;this.rev=null;this.dup=false;this.dupC=null;this._dupSeen=false;
     this.log=[];this.hist=[];this.bds=[];this.bubs=[];this.at=null;this.lastLine=null;
     this._usedD=new Set();this._usedN=new Set(); // セリフ重複防止用
     const c=bd.cnt();this.hist.push({b:c.b,w:c.w,e:c.e,ev:'開始',flips:0});this.bds.push(bd.clone());
@@ -745,7 +745,7 @@ class TM{
       else{const ci=tp.indexOf(cpus[0]);this.bubs=[{icon:cpus[0].icon,text:pair[ci],corner:this.ps.indexOf(cpus[0]),delay:baseDelay}];}
     }
     this.bMsg=d?T('crashed'):T('opened');
-    this.bSub=d?T('crashedSub'):T('openedSub');
+    this.bSub=d?(this._dupSeen?'':T('crashedSub')):T('openedSub');if(d)this._dupSeen=true;
     this.msg='';this.sub='';
     // 飛行軌道のランダムパラメータ
     this.flyCurve1=(Math.random()-0.5)*200;
@@ -1276,12 +1276,11 @@ class GameScreen{
       this._drawRevealFly(ctx,fs);
       // かぶり時だけパネル表示（フェードイン）
       if(this.tm.dup&&this.tm.bMsg){
-        // 被った2人のパネルの間に表示
-        const tp2=this.tm.tPs;
-        const p1i=ps.indexOf(tp2[0]),p2i=ps.indexOf(tp2[1]);
-        const pos1=this.pPos[p1i],pos2=this.pPos[p2i];
-        const bcx=pos1&&pos2?(pos1.x+pos2.x)/2+ppW/2:cx;
-        const bcy=pos1&&pos2?(pos1.y+pos2.y)/2+ppH/2:this.oy+this.cs*BS/2;
+        // 衝突マスの近くに表示（dupCにセル座標あり）
+        const dc=this.tm.dupC;
+        const bcx=dc?this.ox+dc.cell[1]*this.cs+this.cs/2:cx;
+        const bcy0=dc?this.oy+dc.cell[0]*this.cs+this.cs/2:this.oy+this.cs*BS/2;
+        const bcy=Math.min(Math.max(bcy0+this.cs*0.8,this.oy+this.cs),this.oy+this.cs*(BS-1));
         const sinceLand=performance.now()-this.tm.revT-700;
         const revEl=sinceLand<0?0:Math.min(1,sinceLand/200);
         ctx.save();ctx.globalAlpha=revEl;
@@ -1689,14 +1688,14 @@ class ResultScreen{
 
     const stoneLabel2=w?(wStone===BLACK?'●':'○'):'';
     const wTxt=w?T('teamWin',{s:stoneLabel2}):T('draw');
-    tt(ctx,wTxt,cx,y,`bold ${fs*1.3}px sans-serif`,w?(wStone===BLACK?C.tA:C.tB):fgMain);y+=fs*1.5;
+    tt(ctx,wTxt,cx,y,`bold ${fs*1.3}px sans-serif`,w?(wStone===BLACK?C.tA:C.tB):fgMain);y+=fs*1.8;
 
     // スコア
-    tt(ctx,`${iA} ${scoreA} - ${scoreB} ${iB}`,cx,y,`bold ${fs*0.9}px sans-serif`,C.gold);y+=fs*1.5;
+    tt(ctx,`${iA} ${scoreA} - ${scoreB} ${iB}`,cx,y,`bold ${fs*0.9}px sans-serif`,C.gold);y+=fs*1.2;
 
     // スプラバー
     const rNumPad=W<500?fs*0.8:0;
-    this.ren.splatBar(lox+rNumPad,y,eW-rNumPad*2,fs*1.2,this.bd,true,this.swap);y+=fs*2.2;
+    this.ren.splatBar(lox+rNumPad,y,eW-rNumPad*2,fs*1.2,this.bd,true,this.swap);y+=fs*2.5;
 
     // 統計データ計算
     const dupA=this.log.filter(t=>t.dup&&t.team==='A').length;
@@ -1717,7 +1716,7 @@ class ResultScreen{
       tt(ctx,'Corner',lgX+fs*0.6,lgY,`${fs*0.45}px sans-serif`,fgSub,'left');
       tt(ctx,'💥',lgX,lgY+fs*0.65,`${fs*0.45}px sans-serif`,fgMain,'left');
       tt(ctx,'Dup',lgX+fs*0.6,lgY+fs*0.65,`${fs*0.45}px sans-serif`,fgSub,'left');
-      y+=gh+fs*0.6;
+      y+=gh+fs*1.0;
     }
 
     // スライダー（中央揃え）
@@ -1733,11 +1732,11 @@ class ResultScreen{
     const pbHov=isHov(pbX,pbY,pbW,pbH);
     tt(ctx,this.playing?'⏸':'▶️',pbX+pbW/2,y+slH*0.5,`${fs*(pbHov?0.8:0.65)}px sans-serif`,pbHov?C.gold:fgMain);
     this.btns.push({id:'play',x:pbX,y:pbY,w:pbW,h:pbH});
-    y+=slH*1.5;
+    y+=slH*2.5;
 
     // 盤面（中央）＋ ●統計（左）＋ ○統計（右）
     const dBd=this.ri>=0&&this.ri<this.bds.length?this.bds[this.ri]:this.bd;
-    const mSz=Math.min(eW*0.35,H*0.22);const mCs=mSz/BS;
+    const mSz=Math.min(W<500?eW*0.45:eW*0.35,H*0.22);const mCs=mSz/BS;
     const mOx=cx-mSz/2;
     let hlCells=null,flipCells=null;
     if(this.ri>=1&&this.ri<this.bds.length){
@@ -1757,7 +1756,7 @@ class ResultScreen{
     const dTotal=dScoreA+dScoreB+(dBdCn.e||0);
     const pctA=dTotal?Math.round(dScoreA/dTotal*100):0;
     const pctB=dTotal?Math.round(dScoreB/dTotal*100):0;
-    tt(ctx,`${curIdx} / ${total}`,cx,y-fs*0.3,`bold ${fs*0.55}px sans-serif`,C.gold);
+    tt(ctx,`${curIdx} / ${total}`,cx,y-fs*0.5,`bold ${fs*0.55}px sans-serif`,C.gold);
 
     // かぶり・角を現在ターンまでの累計で計算
     const logsUpTo=this.log.slice(0,curIdx);
