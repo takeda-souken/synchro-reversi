@@ -605,7 +605,7 @@ class TM{
 
   auto(ms){if(this.at)clearTimeout(this.at);this.at=setTimeout(()=>this.tap(0,0,false),ms/this.spd);}
 
-  startTurn(){
+  startTurn(){this.bubs=[];
     this.bMsg='';this.bSub='';this.dupC=null;
     this.vm=this.bd.validM(this.tCol);this.isRescue=this.bd._isRescue||false;
     if(!this.vm.length){this.cP++;if(this.cP>=2||this.bd.cnt().e===0){this.goGameOver();return;}
@@ -740,7 +740,7 @@ class TM{
       }
       this.lastLine=pair;
       // かぶり時は衝突(700ms)の後にセリフを出す
-      const baseDelay=d?800:0;
+      const baseDelay=d?1800:1000;
       if(cpus.length>=2){this.bubs=[{icon:tp[0].icon,text:pair[0],corner:this.ps.indexOf(tp[0]),delay:baseDelay},{icon:tp[1].icon,text:pair[1],corner:this.ps.indexOf(tp[1]),delay:baseDelay+300}];}
       else{const ci=tp.indexOf(cpus[0]);this.bubs=[{icon:cpus[0].icon,text:pair[ci],corner:this.ps.indexOf(cpus[0]),delay:baseDelay}];}
     }
@@ -1597,7 +1597,7 @@ class GameScreen{
     const elapsed=performance.now()-this.tm.revT-(bb.delay||0);
     if(elapsed<0)return;
     const fadeIn=Math.min(1,elapsed/200); // 200msフェードイン
-    const life=2500; // 表示時間
+    const life=15000; // 次のアクションまで長く表示
     const fadeOut=elapsed>life?Math.max(0,1-(elapsed-life)/300):1; // 300msフェードアウト
     const alpha=fadeIn*fadeOut;
     if(alpha<=0)return;
