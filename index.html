@@ -1337,7 +1337,7 @@ class GameScreen{
       if(this.tm.dup&&this.tm.bMsg){
         // 衝突マスの近くに表示（dupCにセル座標あり）
         const dc=this.tm.dupC;
-        const bcx=dc?this.ox+dc.cell[1]*this.cs+this.cs/2:cx;
+        const bcx=dc?Math.max(fs*4,Math.min(W-fs*4,this.ox+dc.cell[1]*this.cs+this.cs/2)):cx;
         const bcy0=dc?this.oy+dc.cell[0]*this.cs+this.cs/2:this.oy+this.cs*BS/2;
         const bcy=Math.min(Math.max(bcy0+this.cs*0.8,this.oy+this.cs),this.oy+this.cs*(BS-1));
         const sinceLand=performance.now()-this.tm.revT-700;
