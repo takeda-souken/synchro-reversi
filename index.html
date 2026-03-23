@@ -328,7 +328,7 @@ function LEC(){return LANG==='en'?END_CLOSE_EN:END_CLOSE;}
 function rrect(x,y,w,h,r){x.beginPath();x.moveTo(y+r,w);x.lineTo(y+h-r,w);x.quadraticCurveTo(y+h,w,y+h,w+r);x.lineTo(y+h,w+r-r);/* ... */}
 // ↑ 上のrrectは壊れてるので正しく書き直す:
 function rr(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();}
-function tt(ctx,t,x,y,f,c,a='center',b='middle'){ctx.font=f;ctx.fillStyle=c;ctx.textAlign=a;ctx.textBaseline=b;ctx.fillText(t,x,y);}
+function tt(ctx,t,x,y,f,c,a='center',b='middle',mw){ctx.font=f;ctx.fillStyle=c;ctx.textAlign=a;ctx.textBaseline=b;if(mw)ctx.fillText(t,x,y,mw);else ctx.fillText(t,x,y);}
 function hit(tx,ty,x,y,w,h){return tx>=x&&tx<=x+w&&ty>=y&&ty<=y+h;}
 function eo(t){return 1-Math.pow(1-t,3);}
 // 溜めて→ストン着地（ease-in cubic、t=1で確実に1.0）
@@ -1316,7 +1316,7 @@ class GameScreen{
         const isYou2=humanCount===1&&!curP.isCPU;
         // 「あなた」ラベルと被らないようにずらす
         const msgY2=mob?(isTop2?this._bubbleTopY+fs*0.7:this._bubbleBotY+fs*0.7):(isTop2?pp2.y+ppH+fs*0.5:pp2.y-(isYou2?fs*1.1:fs*0.6));
-        const msgX2=Math.min(Math.max(pp2.x+ppW/2,fs*3),W-fs*3);tt(ctx,this.tm.msg,msgX2,msgY2,`bold ${fs*0.55}px sans-serif`,C.gold);
+        const msgX2=cx;tt(ctx,this.tm.msg,msgX2,msgY2,`bold ${fs*0.55}px sans-serif`,C.gold,'center','middle',W-16);
       }
     }
     if(ph===PH.PC&&curP){
@@ -1618,7 +1618,7 @@ class GameScreen{
     const floatY=py+floatDir*(1-fadeIn)*fs*0.5;
     rr(ctx,px,floatY,pw,ph2,10);ctx.fillStyle=bgCol;ctx.fill();
     ctx.strokeStyle=borderCol;ctx.lineWidth=1.5;ctx.stroke();
-    tt(ctx,bb.text,px+pw/2,floatY+ph2/2,`bold ${fs*0.5}px sans-serif`,'#fff');
+    tt(ctx,bb.text,px+pw/2,floatY+ph2/2,`bold ${fs*0.5}px sans-serif`,'#fff','center','middle',pw-8);
     ctx.restore();
   }
   update(now){
