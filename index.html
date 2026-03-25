@@ -2047,13 +2047,44 @@ class ResultScreen{
 
 // §10 PlayerCountScreen — 初回起動時の人数選択
 class PlayerCountScreen{
-  constructor(app){this.app=app;this.btns=[];}
+  constructor(app){this.app=app;this.btns=[];this.ren=new R(app.ctx);
+    // 背景演出: ランダム反転する石
+    this._bgCells=[];this._bgFlips=[];
+    for(let r=0;r<BS;r++)for(let c=0;c<BS;c++)this._bgCells.push({r,c,col:Math.random()<0.5?BLACK:WHITE});
+    this._bgNextFlip=0;
+  }
   draw(ctx,W,H){
     const t=(Math.sin(performance.now()/2000)+1)/2;
     const mix=(a,b,r)=>Math.round(a+(b-a)*r);
     ctx.fillStyle=`rgb(${mix(C.bgA[0],C.bgB[0],t)},${mix(C.bgA[1],C.bgB[1],t)},${mix(C.bgA[2],C.bgB[2],t)})`;
     ctx.fillRect(0,0,W,H);this.btns=[];
     const{eW,cx,fs}=L(W,H);
+    // 背景演出: パチパチ反転する石
+    const now=performance.now();
+    if(now>this._bgNextFlip){
+      const idx=Math.floor(Math.random()*this._bgCells.length);
+      const cell=this._bgCells[idx];
+      const newCol=cell.col===BLACK?WHITE:BLACK;
+      this._bgFlips.push({r:cell.r,c:cell.c,from:cell.col,to:newCol,start:now});
+      cell.col=newCol;
+      this._bgNextFlip=now+80+Math.random()*120;
+    }
+    this._bgFlips=this._bgFlips.filter(f=>now-f.start<400);
+    {const bgCs=Math.min(W/BS,H/BS)*0.9;const bgOx=(W-bgCs*BS)/2;const bgOy=(H-bgCs*BS)/2;
+      ctx.save();ctx.globalAlpha=0.08;
+      for(const c of this._bgCells){
+        const isFlipping=this._bgFlips.find(f=>f.r===c.r&&f.c===c.c);
+        if(!isFlipping)this.ren.stone(bgOx+c.c*bgCs+bgCs/2,bgOy+c.r*bgCs+bgCs/2,bgCs*0.38,c.col);
+      }
+      ctx.globalAlpha=0.15;
+      for(const f of this._bgFlips){
+        const p=Math.min(1,(now-f.start)/400);
+        let sx,col;if(p<0.5){sx=1-p*2;col=f.from;}else{sx=(p-0.5)*2;col=f.to;}
+        const cx2=bgOx+f.c*bgCs+bgCs/2,cy2=bgOy+f.r*bgCs+bgCs/2;
+        this.ren.stone(cx2,cy2,bgCs*0.38,col,Math.max(0.05,sx));
+      }
+      ctx.restore();
+    }
     // テキスト色: 背景が白(t=1)→黒文字、背景が黒(t=0)→白文字
     const fm=Math.round(240-(240-26)*t);
     const fgMain=`rgb(${fm},${fm},${fm})`;
