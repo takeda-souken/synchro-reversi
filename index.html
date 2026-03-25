@@ -996,12 +996,12 @@ class TM{
   }
   updateAnim(now){if(this.phase!==PH.AN)return;let done=true;
     for(const a of this.anims){const el=now-a.startTime;const dur=a.type==='place'?250:a.type==='miss'?900:350;a.progress=Math.min(1,Math.max(0,el/dur));if(a.progress<1)done=false;}
-    const wait=this.spd>=8?80:600/Math.max(1,this.spd);
+    const wait=this.spd>=8?80:Math.max(300,600/Math.max(1,this.spd));
     if(done&&now-this.animT>wait){this.anims=[];const cn=this.bd.cnt();
       if(cn.e===0){this.goGameOver();return;}
       const nc=this.ti===0?WHITE:BLACK;if(!this.bd.validM(nc).length&&!this.bd.validM(this.tCol).length){this.goGameOver();return;}
       this.phase=PH.TE;this.msg='';this.sub='';
-      this.auto(this.spd>=8?80:800);}}
+      this.auto(this.spd>=8?80:Math.max(300,800/Math.max(1,this.spd)));}}
   goGameOver(){
     this.phase=PH.GO;
     // 勝敗セリフ: 4人それぞれに台詞を割り当て
@@ -1830,7 +1830,9 @@ class GameScreen{
     // チュートリアル解除後にautoを再開（ただしphaseが既に進行中なら不要）
     if(this.tm._autoDeferred){this.tm._autoDeferred=false;
       if(this.tm.phase===PH.ST||this.tm.phase===PH.TE||this.tm.phase===PH.PA)this.tm.auto(300);}
-    const rd=this.tm.spd>=8?150:this.tm.dup?Math.max(1500,1500/this.tm.spd):1200/Math.max(1,this.tm.spd);
+    // ×8は超高速、×4以下は飛行アニメ(700ms)を必ず完走させてから待つ
+    const flyDur=700;
+    const rd=this.tm.spd>=8?150:Math.max(flyDur+100,this.tm.dup?1500/this.tm.spd:1200/Math.max(1,this.tm.spd));
     if(this.tm.phase===PH.RV&&now-this.tm.revT>rd){if(this.tm.dup)this.shakeT=now;this.tm.execPlace();}
     if(this.tm.phase===PH.AN)this.tm.updateAnim(now);
   }
