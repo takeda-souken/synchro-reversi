@@ -1296,7 +1296,7 @@ class GameScreen{
     // 3段階: アクティブ > チームの番 > 非アクティブ
     const bgNorm=isBlack?'rgba(20,20,20,0.3)':'rgba(240,239,232,0.5)';
     const bgTeam=isBlack?'rgba(30,20,18,0.5)':'rgba(242,241,236,0.75)';
-    const bgAct=isBlack?'rgba(50,20,18,0.65)':'rgba(245,244,238,0.92)';
+    const bgAct=isBlack?'rgba(180,50,40,0.75)':'rgba(50,120,180,0.75)';
     rr(ctx,pos.x,pos.y,pw,ph,8);
     ctx.fillStyle=isActive?bgAct:isTeamTurn?bgTeam:bgNorm;ctx.fill();
     if(isActive){
