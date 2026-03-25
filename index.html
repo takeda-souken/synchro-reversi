@@ -1301,10 +1301,11 @@ class GameScreen{
     ctx.fillStyle=isActive?bgAct:isTeamTurn?bgTeam:bgNorm;ctx.fill();
     if(isActive){
       // ギラギラグロー（3重描画で発光感）
-      ctx.strokeStyle=iCol;ctx.lineWidth=4;
-      ctx.shadowColor=iCol;ctx.shadowBlur=60;ctx.stroke();
-      ctx.shadowBlur=40;ctx.stroke();
-      ctx.shadowBlur=20;ctx.stroke();
+      const mobP=pw<100;
+      ctx.strokeStyle=iCol;ctx.lineWidth=mobP?4:8;
+      ctx.shadowColor=iCol;ctx.shadowBlur=mobP?60:80;ctx.stroke();
+      ctx.shadowBlur=mobP?40:55;ctx.stroke();
+      ctx.shadowBlur=mobP?20:30;ctx.stroke();
       ctx.shadowBlur=0;
     }else if(isTeamTurn){
       ctx.strokeStyle=iCol;ctx.lineWidth=1.5;ctx.stroke();
