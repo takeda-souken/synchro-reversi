@@ -1531,6 +1531,19 @@ class GameScreen{
       drawBtn(ctx,T('toResult'),cx-bw2/2,btnY2,bw2,bh2);this.btns.push({id:'res',x:cx-bw2/2,y:btnY2,w:bw2,h:bh2});
     }
     // チュートリアル吹き出し
+    // ホーム遷移確認オーバーレイ
+    if(this._homeConfirm){
+      ctx.fillStyle='rgba(80,80,80,0.85)';ctx.fillRect(0,0,W,H);
+      const dlgW=Math.min(eW*0.8,320),dlgH=fs*7,dlgX=cx-dlgW/2,dlgY=H/2-dlgH/2;
+      rr(ctx,dlgX,dlgY,dlgW,dlgH,12);ctx.fillStyle='#2a2a2a';ctx.fill();ctx.strokeStyle='rgba(255,255,255,0.15)';ctx.lineWidth=1;ctx.stroke();
+      tt(ctx,T('homeConfirm'),cx,dlgY+fs*1.5,`bold ${fs*0.7}px sans-serif`,'#fff');
+      tt(ctx,T('homeConfirmSub'),cx,dlgY+fs*2.5,`${fs*0.5}px sans-serif`,C.sub);
+      const btnW2=dlgW*0.35,btnH2=fs*1.5,btnY2=dlgY+dlgH-fs*2.3,gap4=fs*0.4;
+      drawBtn(ctx,T('homeYes'),cx-btnW2-gap4/2,btnY2,btnW2,btnH2,'#c04040','#fff');
+      this.btns.push({id:'homeYes',x:cx-btnW2-gap4/2,y:btnY2,w:btnW2,h:btnH2});
+      drawBtn(ctx,T('homeNo'),cx+gap4/2,btnY2,btnW2,btnH2,'#2d9e5f','#fff');
+      this.btns.push({id:'homeNo',x:cx+gap4/2,y:btnY2,w:btnW2,h:btnH2});
+    }
     this._drawTutorial(ctx,W,H,cx,fs,ph);
   }
 
