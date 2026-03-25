@@ -716,7 +716,7 @@ class TM{
 
   auto(ms){if(this.at)clearTimeout(this.at);this.at=setTimeout(()=>this.tap(0,0,false),ms/this.spd);}
 
-  startTurn(){this.bubs=[];
+  startTurn(){// bubs はタイマーで自然消滅させる（パツっと消えない）
     this.bMsg='';this.bSub='';this.dupC=null;
     this.vm=this.bd.validM(this.tCol);this.isRescue=this.bd._isRescue||false;
     if(!this.vm.length){this.cP++;if(this.cP>=2||this.bd.cnt().e===0){this.goGameOver();return;}
