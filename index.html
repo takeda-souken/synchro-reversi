@@ -1465,11 +1465,7 @@ class GameScreen{
       const el=now2-this.tm.revT-(bb.delay||0);
       if(el<0)return true; // まだ表示前
       if(el>4500)return false; // フェードアウト完了→除去
-      // 最後の600msでフェードアウト
-      const fadeOut=el>3900?1-(el-3900)/600:1;
-      ctx.save();ctx.globalAlpha=fadeOut;
-      this._bubble(ctx,W,H,bb,fs);
-      ctx.restore();return true;
+      this._bubble(ctx,W,H,bb,fs);return true;
     });
 
     // 開始演出（画面中央）
@@ -1806,8 +1802,7 @@ class GameScreen{
     const elapsed=performance.now()-this.tm.revT-(bb.delay||0);
     if(elapsed<0)return;
     const fadeIn=Math.min(1,elapsed/200); // 200msフェードイン
-    const life=15000; // 次のアクションまで長く表示
-    const fadeOut=elapsed>life?Math.max(0,1-(elapsed-life)/300):1; // 300msフェードアウト
+    const fadeOut=elapsed>3900?Math.max(0,1-(elapsed-3900)/600):1; // 最後600msフェードアウト
     const alpha=fadeIn*fadeOut;
     if(alpha<=0)return;
 
