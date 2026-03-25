@@ -1086,7 +1086,7 @@ class TitleScreen{
     const lnH2=isHov(langBtnX,langBtnY,langBtnW,langBtnH);
     ctx.fillStyle=lnH2?'rgba(255,255,255,0.15)':'rgba(255,255,255,0.05)';ctx.fill();
     ctx.strokeStyle=lnH2?C.gold:fgSub;ctx.lineWidth=1;ctx.stroke();
-    tt(ctx,LANG==='ja-h'?'日本語':LANG==='ja'?'English':'にほんご',langBtnX+langBtnW/2,langBtnY+langBtnH/2,`${lnH2?'bold ':''}${fs*0.5}px sans-serif`,lnH2?C.gold:fgSub);
+    tt(ctx,LANG==='ja-h'?'にほんご':LANG==='ja'?'日本語':'English',langBtnX+langBtnW/2,langBtnY+langBtnH/2,`${lnH2?'bold ':''}${fs*0.5}px sans-serif`,lnH2?C.gold:fgSub);
     this.btns.push({id:'lang',x:langBtnX,y:langBtnY,w:langBtnW,h:langBtnH});
     y+=fs*1.5;
 
@@ -2077,7 +2077,7 @@ class PlayerCountScreen{
     const lbH2=isHov(lbX,lbY,lbW,lbH);
     ctx.fillStyle=lbH2?'rgba(255,255,255,0.15)':'rgba(255,255,255,0.05)';ctx.fill();
     ctx.strokeStyle=lbH2?C.gold:fgMain;ctx.lineWidth=1;ctx.stroke();
-    tt(ctx,LANG==='ja-h'?'日本語':LANG==='ja'?'English':'にほんご',lbX+lbW/2,lbY+lbH/2,`${lbH2?'bold ':''}${fs*0.35}px sans-serif`,lbH2?C.gold:fgMain);
+    tt(ctx,LANG==='ja-h'?'にほんご':LANG==='ja'?'日本語':'English',lbX+lbW/2,lbY+lbH/2,`${lbH2?'bold ':''}${fs*0.35}px sans-serif`,lbH2?C.gold:fgMain);
     this.btns.push({id:'lang',x:lbX,y:lbY,w:lbW,h:lbH});
   }
   handleTap(tx,ty){
