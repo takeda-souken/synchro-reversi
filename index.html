@@ -1095,16 +1095,16 @@ class TitleScreen{
     const preA=PRESETS[this.pA],preB=PRESETS[this.pB];
     const aLabel=this.swap?T('secondTurn'):T('firstTurn'), bLabel=this.swap?T('firstTurn'):T('secondTurn');
     const aStone=this.swap?WHITE:BLACK, bStone=this.swap?BLACK:WHITE;
-    tt(ctx,aLabel,cx-fs*3.2,y+fs*0.4,`${fs*0.5}px sans-serif`,fgSub);
-    tt(ctx,preA[0],cx-fs*2.2,y+fs*0.4,`${fs*0.6}px sans-serif`,fgMain);
-    this.ren.stone(cx-fs*1.3,y+fs*0.4,stoneR,aStone);
-    const swpBx=cx-fs*1.5,swpBy=y,swpBw=fs*3,swpBh=fs*1;
+    tt(ctx,aLabel,cx-fs*2.6,y+fs*0.4,`${fs*0.5}px sans-serif`,fgSub,'right');
+    tt(ctx,preA[0],cx-fs*2,y+fs*0.4,`${fs*0.6}px sans-serif`,fgMain);
+    this.ren.stone(cx-fs*1.2,y+fs*0.4,stoneR,aStone);
+    const swpBx=cx-fs*1,swpBy=y,swpBw=fs*2,swpBh=fs*1;
     hovFx(ctx,swpBx,swpBy,swpBw,swpBh);
     const swH=isHov(swpBx,swpBy,swpBw,swpBh);
     tt(ctx,'⇄',cx,y+fs*0.4,`${swH?'bold ':''}${fs*(swH?0.65:0.55)}px sans-serif`,swH?fgMain:C.gold);
-    this.ren.stone(cx+fs*1.3,y+fs*0.4,stoneR,bStone);
-    tt(ctx,preB[0],cx+fs*2.2,y+fs*0.4,`${fs*0.6}px sans-serif`,fgMain);
-    tt(ctx,bLabel,cx+fs*3.2,y+fs*0.4,`${fs*0.5}px sans-serif`,fgSub);
+    this.ren.stone(cx+fs*1.2,y+fs*0.4,stoneR,bStone);
+    tt(ctx,preB[0],cx+fs*2,y+fs*0.4,`${fs*0.6}px sans-serif`,fgMain);
+    tt(ctx,bLabel,cx+fs*2.6,y+fs*0.4,`${fs*0.5}px sans-serif`,fgSub,'left');
     this.btns.push({id:'swap',x:swpBx,y:swpBy,w:swpBw,h:swpBh});
     y+=fs*1.8;
 
@@ -1299,8 +1299,8 @@ class GameScreen{
     rr(ctx,pos.x,pos.y,pw,ph,8);
     ctx.fillStyle=isActive?bgAct:isTeamTurn?bgTeam:bgNorm;ctx.fill();
     if(isActive){
-      ctx.shadowColor=iCol;ctx.shadowBlur=12;
-      ctx.strokeStyle=iCol;ctx.lineWidth=2.5;ctx.stroke();
+      ctx.shadowColor=iCol;ctx.shadowBlur=45;
+      ctx.strokeStyle=iCol;ctx.lineWidth=3;ctx.stroke();
       ctx.shadowBlur=0;
     }else if(isTeamTurn){
       ctx.strokeStyle=iCol;ctx.lineWidth=1.5;ctx.stroke();
