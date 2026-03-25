@@ -1461,8 +1461,12 @@ class GameScreen{
     this.tm.bubs=this.tm.bubs.filter(bb=>{
       const el=now2-this.tm.revT-(bb.delay||0);
       if(el<0)return true; // まだ表示前
-      if(el>4500)return false; // フェードアウト完了→除去（+1.7s延長）
-      this._bubble(ctx,W,H,bb,fs);return true;
+      if(el>4500)return false; // フェードアウト完了→除去
+      // 最後の600msでフェードアウト
+      const fadeOut=el>3900?1-(el-3900)/600:1;
+      ctx.save();ctx.globalAlpha=fadeOut;
+      this._bubble(ctx,W,H,bb,fs);
+      ctx.restore();return true;
     });
 
     // 開始演出（画面中央）
@@ -1484,9 +1488,11 @@ class GameScreen{
     if(ph===PH.PC&&curP){
       if(mob){
         const bw=Math.min(eW*0.55,220),bh=Math.max(fs*2,52);
-        const bSz2=this.cs*BS,by2=this.oy+bSz2+fs*3.5;
-        if(this.tm.sub)tt(ctx,this.tm.sub,cx,by2-fs*0.3,`${fs*0.5}px sans-serif`,C.gold);
-        const btnY3=by2+fs*0.3;
+        const bSz2=this.cs*BS;
+        const hasSub=this.tm.sub&&this.tm.sub.length>0;
+        const by2=this.oy+bSz2+(hasSub?fs*4.5:fs*3.5);
+        if(hasSub)tt(ctx,this.tm.sub,cx,by2-fs*0.8,`${fs*0.45}px sans-serif`,C.gold);
+        const btnY3=by2;
         drawBtn(ctx,T('confirmQ'),cx-bw/2,btnY3,bw,bh,'#2d9e5f','#fff');this.btns.push({id:'ok',x:cx-bw/2,y:btnY3,w:bw,h:bh});
         tt(ctx,T('confirmHint'),cx,btnY3+bh+fs*0.5,`${fs*0.45}px sans-serif`,C.sub);
       }else{
