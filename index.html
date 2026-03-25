@@ -1174,7 +1174,8 @@ class TitleScreen{
     this._ch=btnY+btnH-y0+fs;
 
     // ホームチュートリアル（初回のみ）
-    if(!window._homeTutSeen&&this._teamBoxRect){
+    if(!this._showTime)this._showTime=performance.now();
+    if(!window._homeTutSeen&&this._teamBoxRect&&performance.now()-this._showTime>1000){
       const tb=this._teamBoxRect;const pad=8;
       ctx.save();ctx.globalAlpha=0.82;
       ctx.beginPath();ctx.rect(0,0,W,H);
@@ -2071,16 +2072,16 @@ class PlayerCountScreen{
       const newCol=cell.col===BLACK?WHITE:BLACK;
       this._bgFlips.push({r:cell.r,c:cell.c,from:cell.col,to:newCol,start:now});
       cell.col=newCol;
-      this._bgNextFlip=now+80+Math.random()*120;
+      this._bgNextFlip=now+300+Math.random()*400;
     }
     this._bgFlips=this._bgFlips.filter(f=>now-f.start<400);
     {const bgCs=Math.min(W/BS,H/BS)*0.9;const bgOx=(W-bgCs*BS)/2;const bgOy=(H-bgCs*BS)/2;
-      ctx.save();ctx.globalAlpha=0.08;
+      ctx.save();ctx.globalAlpha=0.18;
       for(const c of this._bgCells){
         const isFlipping=this._bgFlips.find(f=>f.r===c.r&&f.c===c.c);
         if(!isFlipping)this.ren.stone(bgOx+c.c*bgCs+bgCs/2,bgOy+c.r*bgCs+bgCs/2,bgCs*0.38,c.col);
       }
-      ctx.globalAlpha=0.15;
+      ctx.globalAlpha=0.25;
       for(const f of this._bgFlips){
         const p=Math.min(1,(now-f.start)/400);
         let sx,col;if(p<0.5){sx=1-p*2;col=f.from;}else{sx=(p-0.5)*2;col=f.to;}
