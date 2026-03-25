@@ -1299,8 +1299,11 @@ class GameScreen{
     rr(ctx,pos.x,pos.y,pw,ph,8);
     ctx.fillStyle=isActive?bgAct:isTeamTurn?bgTeam:bgNorm;ctx.fill();
     if(isActive){
-      ctx.shadowColor=iCol;ctx.shadowBlur=45;
-      ctx.strokeStyle=iCol;ctx.lineWidth=3;ctx.stroke();
+      // ギラギラグロー（3重描画で発光感）
+      ctx.strokeStyle=iCol;ctx.lineWidth=4;
+      ctx.shadowColor=iCol;ctx.shadowBlur=60;ctx.stroke();
+      ctx.shadowBlur=40;ctx.stroke();
+      ctx.shadowBlur=20;ctx.stroke();
       ctx.shadowBlur=0;
     }else if(isTeamTurn){
       ctx.strokeStyle=iCol;ctx.lineWidth=1.5;ctx.stroke();
