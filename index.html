@@ -1408,11 +1408,16 @@ class GameScreen{
         ctx.save();ctx.globalAlpha=revEl;
         const panW2=Math.min(ppW*2,fs*7);
         const dupStone=this.tm.tCol;
-        const dupBorder=dupStone===BLACK?'rgba(180,50,40,0.8)':'rgba(60,140,190,0.8)';
-        ctx.fillStyle='rgba(0,0,0,0.75)';rr(ctx,bcx-panW2/2,bcy-fs*1,panW2,fs*2.2,12);ctx.fill();
-        ctx.strokeStyle=dupBorder;ctx.lineWidth=2.5;ctx.stroke();
-        tt(ctx,this.tm.bMsg,bcx,bcy-fs*0.15,`bold ${fs*0.65}px sans-serif`,C.txt);
-        tt(ctx,this.tm.bSub,bcx,bcy+fs*0.5,`${fs*0.5}px sans-serif`,C.goldL);
+        const dupFill=dupStone===BLACK?'rgba(180,50,40,0.85)':'rgba(60,140,190,0.85)';
+        const hasSub=this.tm.bSub&&this.tm.bSub.length>0;
+        const panH2=hasSub?fs*2.2:fs*1.4;
+        rr(ctx,bcx-panW2/2,bcy-panH2/2,panW2,panH2,12);ctx.fillStyle=dupFill;ctx.fill();
+        if(hasSub){
+          tt(ctx,this.tm.bMsg,bcx,bcy-fs*0.2,`bold ${fs*0.65}px sans-serif`,'#fff');
+          tt(ctx,this.tm.bSub,bcx,bcy+fs*0.45,`${fs*0.45}px sans-serif`,'rgba(255,255,255,0.8)');
+        }else{
+          tt(ctx,this.tm.bMsg,bcx,bcy,`bold ${fs*0.65}px sans-serif`,'#fff');
+        }
         ctx.restore();
       }
     }
