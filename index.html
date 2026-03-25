@@ -2072,7 +2072,7 @@ class PlayerCountScreen{
       this.btns.push({id:i+1,x:cx-bw/2,y:by,w:bw,h:bh});
     }
     // 言語切替（右上）
-    const lbX=W-fs*2.5,lbY=fs*0.3,lbW=fs*2,lbH=fs*0.7;
+    const lbW=fs*3.2,lbX=W-lbW-fs*0.5,lbY=fs*0.3,lbH=fs*0.8;
     rr(ctx,lbX,lbY,lbW,lbH,4);
     const lbH2=isHov(lbX,lbY,lbW,lbH);
     ctx.fillStyle=lbH2?'rgba(255,255,255,0.15)':'rgba(255,255,255,0.05)';ctx.fill();
