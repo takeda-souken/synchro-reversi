@@ -1477,7 +1477,7 @@ class GameScreen{
         const isTop2=pp2.y<this.oy+this.cs*BS/2;
         const isYou2=humanCount===1&&!curP.isCPU;
         // 「あなた」ラベルと被らないようにずらす
-        const msgY2=mob?(isTop2?this._bubbleTopY+fs*0.7:this._bubbleBotY+fs*0.7):(isTop2?pp2.y+ppH+fs*0.5:pp2.y-(isYou2?fs*1.1:fs*0.6));
+        const msgY2=mob?(isTop2?this._bubbleTopY+fs*0.7:this._bubbleBotY+fs*0.7):(isTop2?pp2.y-fs*0.6:pp2.y+ppH+fs*0.5);
         const msgX2=cx;tt(ctx,this.tm.msg,msgX2,msgY2,`bold ${fs*0.55}px sans-serif`,C.gold,'center','middle',W-16);
       }
     }
