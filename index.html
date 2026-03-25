@@ -1531,7 +1531,8 @@ class GameScreen{
       drawBtn(ctx,T('toResult'),cx-bw2/2,btnY2,bw2,bh2);this.btns.push({id:'res',x:cx-bw2/2,y:btnY2,w:bw2,h:bh2});
     }
     // チュートリアル吹き出し
-    // ホーム遷移確認オーバーレイ
+    this._drawTutorial(ctx,W,H,cx,fs,ph);
+    // ホーム遷移確認オーバーレイ（チュートリアルより手前）
     if(this._homeConfirm){
       ctx.fillStyle='rgba(80,80,80,0.85)';ctx.fillRect(0,0,W,H);
       const dlgW=Math.min(eW*0.8,320),dlgH=fs*7,dlgX=cx-dlgW/2,dlgY=H/2-dlgH/2;
@@ -1544,7 +1545,6 @@ class GameScreen{
       drawBtn(ctx,T('homeNo'),cx+gap4/2,btnY2,btnW2,btnH2,'#2d9e5f','#fff');
       this.btns.push({id:'homeNo',x:cx+gap4/2,y:btnY2,w:btnW2,h:btnH2});
     }
-    this._drawTutorial(ctx,W,H,cx,fs,ph);
   }
 
   // チュートリアルがアクティブか（ゲーム進行を止めるべきか）
