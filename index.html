@@ -1314,7 +1314,7 @@ class GameScreen{
       this.btns.push({id:'spd',x:spdX,y:spdY,w:spW,h:spH});
       // Row 2: スプラバー
       barH=fs*1.5;const barY=ctrlH+6;const numPad=barH*1.0;
-      this.ren.splatBar(lox+numPad,barY,eW-numPad*2,barH,this.bd,false,this.tm.swap,_locked);
+      this.ren.splatBar(lox+numPad,barY,eW-numPad*2,barH,this.bd,false,this.tm.swap,null);
       // Row 3: ターンインジケーター
       const turnY=barY+barH+2;
       if(isBlackTurn){ctx.fillStyle='#1a1a1a';ctx.fillRect(0,turnY,W,6);ctx.fillStyle=C.tA;ctx.fillRect(0,turnY-1,W,1.5);ctx.fillRect(0,turnY+6,W,1.5);}
@@ -1331,7 +1331,7 @@ class GameScreen{
       const sidePanel=fs*3.5;const bPx=Math.min(eW-sidePanel*2,bArea*0.85);
       this.cs=bPx/BS;this.ox=(W-bPx)/2;this.oy=topH+(bArea-bPx)/2;
       const pnl=this._calcPlayerPos(W,H,fs);ppW=pnl.pw;ppH=pnl.ph;
-      this.ren.splatBar(lox,barP2,eW,barH,this.bd,false,this.tm.swap,_locked);
+      this.ren.splatBar(lox,barP2,eW,barH,this.bd,false,this.tm.swap,null);
       const hmX=2,hmY=barP2+barH+fs*0.1,hmW=fs*1.5,hmH=fs*0.9;
       hovFx(ctx,hmX,hmY,hmW,hmH);
       tt(ctx,'🏠',hmX+hmW/2,hmY+hmH/2,`${fs*(isHov(hmX,hmY,hmW,hmH)?0.7:0.6)}px sans-serif`,isHov(hmX,hmY,hmW,hmH)?'rgba(255,255,255,0.95)':'rgba(255,255,255,0.7)');
