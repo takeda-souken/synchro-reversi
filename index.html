@@ -28,7 +28,7 @@ const I18N={
   firstTurn:{ja:'先攻','ja-h':'せんこう',en:'1st'},
   secondTurn:{ja:'後攻','ja-h':'こうこう',en:'2nd'},
   layout:{ja:'初期配置','ja-h':'さいしょのならび',en:'Layout'},
-  speed:{ja:'観戦速度','ja-h':'みるはやさ',en:'Speed'},
+  speed:{ja:'スピード','ja-h':'スピード',en:'Speed'},
   start:{ja:'▶  はじめる','ja-h':'▶  はじめる',en:'▶  START'},
   // レイアウト名
   standard:{ja:'スタンダード',en:'Standard'},
@@ -90,7 +90,11 @@ const I18N={
   tutHelpOff:{ja:'チュートリアルOFF','ja-h':'チュートリアルOFF',en:'Tutorial OFF'},
   tutSecret:{ja:'チームの相方にはないしょ！\nでも相手チームは見てもOK 😏',en:'Keep it secret from your partner!\nBut the other team can peek 😏','ja-h':'チームのあいぼうにはないしょ！\nでもあいてチームはみてもOK 😏'},
   tutRescue:{ja:'石が全滅！救済措置で\n1つだけ自由に置けるよ\n（角はできるだけダメ！）','ja-h':'いしがぜんめつ！すくいのてで\n1つだけじゆうにおけるよ\n（かどはできるだけダメ！）',en:'All stones gone! You get\none free placement\n(corners blocked if possible!)'},
+  tutHomeTeam:{ja:'ここを{act}すると\nチーム編成を変えられるよ！','ja-h':'ここを{act}すると\nチームへんせいをかえられるよ！',en:'{Act} here to\nchange team setup!'},
 };
+const _isTouch='ontouchstart' in window;
+function _act(){return _isTouch?(LANG==='ja'||LANG==='ja-h'?'タップ':'tap'):(LANG==='ja'||LANG==='ja-h'?'クリック':'click');}
+function _Act(){return _isTouch?(LANG==='ja'||LANG==='ja-h'?'タップ':'Tap'):(LANG==='ja'||LANG==='ja-h'?'クリック':'Click');}
 function T(key,vars){const e=I18N[key]||{};let s=e[LANG]||(LANG==='ja-h'?e['ja']:null)||key;if(vars)for(const[k,v]of Object.entries(vars))s=s.replace(`{${k}}`,v);return s;}
 
 const EMPTY=0,BLACK=1,WHITE=2,BS=8;
@@ -1077,12 +1081,12 @@ class TitleScreen{
     tt(ctx,'Reversi',cx,y,`bold ${fs*1.6}px sans-serif`,fgMain);y+=fs*1.5;
     tt(ctx,T('subtitle'),cx,y,`${fs*0.55}px sans-serif`,fgSub);
     // 言語切替ボタン（サブタイトル右）
-    const langBtnX=cx+fs*4.5,langBtnY=y-fs*0.25,langBtnW=fs*1.8,langBtnH=fs*0.6;
+    const langBtnW=fs*3.2,langBtnH=fs*0.7,langBtnX=cx+fs*4,langBtnY=y-fs*0.25;
     rr(ctx,langBtnX,langBtnY,langBtnW,langBtnH,4);
     const lnH2=isHov(langBtnX,langBtnY,langBtnW,langBtnH);
     ctx.fillStyle=lnH2?'rgba(255,255,255,0.15)':'rgba(255,255,255,0.05)';ctx.fill();
     ctx.strokeStyle=lnH2?C.gold:fgSub;ctx.lineWidth=1;ctx.stroke();
-    tt(ctx,LANG==='ja'?'EN':LANG==='en'?'あ':'漢',langBtnX+langBtnW/2,langBtnY+langBtnH/2,`${lnH2?'bold ':''}${fs*0.5}px sans-serif`,lnH2?C.gold:fgSub);
+    tt(ctx,LANG==='ja'?'にほんご':LANG==='ja-h'?'English':'日本語',langBtnX+langBtnW/2,langBtnY+langBtnH/2,`${lnH2?'bold ':''}${fs*0.5}px sans-serif`,lnH2?C.gold:fgSub);
     this.btns.push({id:'lang',x:langBtnX,y:langBtnY,w:langBtnW,h:langBtnH});
     y+=fs*1.5;
 
@@ -1112,6 +1116,7 @@ class TitleScreen{
     const colB=this.swap?C.tA:C.tB, bgB2=this.swap?C.tABg:C.tBBg;
     this._teamBox(ctx,bxA,y,bw,bh,this.pA,'A',colA,bgA2,0,fs);
     this._teamBox(ctx,bxB,y,bw,bh,this.pB,'B',colB,bgB2,2,fs);
+    this._teamBoxRect={x:bxA,y,w:bxB+bw-bxA,h:bh}; // チュートリアル用に保存
     y+=bh+fs*1.2;
 
     // 初期配置プレビュー
@@ -1167,6 +1172,33 @@ class TitleScreen{
     }
     this.btns.push({id:'help',x:hx,y:hy,w:hw,h:hh});
     this._ch=btnY+btnH-y0+fs;
+
+    // ホームチュートリアル（初回のみ）
+    if(!window._homeTutSeen&&this._teamBoxRect){
+      const tb=this._teamBoxRect;const pad=8;
+      ctx.save();ctx.globalAlpha=0.82;
+      ctx.beginPath();ctx.rect(0,0,W,H);
+      ctx.rect(tb.x-pad,tb.y-pad,tb.w+pad*2,tb.h+pad*2);
+      ctx.fillStyle='rgba(0,0,0,1)';ctx.fill('evenodd');
+      ctx.globalAlpha=1;
+      // スポットライト枠
+      rr(ctx,tb.x-pad,tb.y-pad,tb.w+pad*2,tb.h+pad*2,10);
+      ctx.strokeStyle=C.gold;ctx.lineWidth=3;ctx.globalAlpha=0.5+0.3*Math.sin(performance.now()/300);ctx.stroke();
+      ctx.globalAlpha=1;
+      // テキストパネル
+      const msg=T('tutHomeTeam',{act:_act(),Act:_Act()});
+      const lines=msg.split('\n');
+      const panW3=Math.min(W*0.7,fs*14),panH3=fs*(0.8+lines.length*0.8);
+      const panX3=cx-panW3/2,panY3=tb.y+tb.h+pad+fs*0.8;
+      rr(ctx,panX3,panY3,panW3,panH3,10);ctx.fillStyle='rgba(0,0,0,0.85)';ctx.fill();
+      for(let i=0;i<lines.length;i++){
+        tt(ctx,lines[i],cx,panY3+fs*0.6+i*fs*0.8,`bold ${fs*0.5}px sans-serif`,'#fff');
+      }
+      const blink=Math.sin(performance.now()/300)>0?1:0.3;
+      ctx.globalAlpha=blink;
+      tt(ctx,'▼',cx,panY3+panH3-fs*0.2,`${fs*0.4}px sans-serif`,C.gold);
+      ctx.restore();
+    }
   }
 
   _teamBox(ctx,x,y,w,h,preIdx,team,color,bg,si,fs){
@@ -1202,10 +1234,11 @@ class TitleScreen{
   }
 
   handleTap(tx,ty){
+    if(!window._homeTutSeen){window._homeTutSeen=true;return;}
     for(const b of this.btns){if(!hit(tx,ty,b.x,b.y,b.w,b.h))continue;
       if(b.id==='go')this.app.startGame(this.ps,LKEYS[this.li],this.swap,this.spd);
       else if(b.id==='help'){window._tutSeen=!window._tutSeen;}
-      else if(b.id==='lang'){LANG=LANG==='ja'?'en':'ja';this._upd();}
+      else if(b.id==='lang'){LANG=LANG==='ja'?'en':LANG==='en'?'ja-h':'ja';this._upd();}
       else if(b.id==='swap')this.swap=!this.swap;
       else if(b.id.startsWith('l_'))this.li=parseInt(b.id.substring(2));
       else if(b.id.startsWith('t_')&&!b.id.startsWith('tL')&&!b.id.startsWith('tR')){const i=parseInt(b.id.substring(2));this.ps[i].isCPU=!this.ps[i].isCPU;}
@@ -2044,7 +2077,7 @@ class PlayerCountScreen{
     const lbH2=isHov(lbX,lbY,lbW,lbH);
     ctx.fillStyle=lbH2?'rgba(255,255,255,0.15)':'rgba(255,255,255,0.05)';ctx.fill();
     ctx.strokeStyle=lbH2?C.gold:fgMain;ctx.lineWidth=1;ctx.stroke();
-    tt(ctx,LANG==='ja'?'EN':'JA',lbX+lbW/2,lbY+lbH/2,`${lbH2?'bold ':''}${fs*0.35}px sans-serif`,lbH2?C.gold:fgMain);
+    tt(ctx,LANG==='ja'?'にほんご':LANG==='ja-h'?'English':'日本語',lbX+lbW/2,lbY+lbH/2,`${lbH2?'bold ':''}${fs*0.35}px sans-serif`,lbH2?C.gold:fgMain);
     this.btns.push({id:'lang',x:lbX,y:lbY,w:lbW,h:lbH});
   }
   handleTap(tx,ty){
