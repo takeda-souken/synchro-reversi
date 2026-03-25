@@ -1428,7 +1428,7 @@ class GameScreen{
     this.tm.bubs=this.tm.bubs.filter(bb=>{
       const el=now2-this.tm.revT-(bb.delay||0);
       if(el<0)return true; // まだ表示前
-      if(el>2800)return false; // フェードアウト完了→除去
+      if(el>4500)return false; // フェードアウト完了→除去（+1.7s延長）
       this._bubble(ctx,W,H,bb,fs);return true;
     });
 
