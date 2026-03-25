@@ -88,10 +88,7 @@ const I18N={
   tutHelp:{ja:'❓',en:'❓'},
   tutHelpOn:{ja:'チュートリアルON！\nゲーム中に説明がでるよ','ja-h':'チュートリアルON！\nゲームちゅうにせつめいがでるよ',en:'Tutorial ON!\nTips will appear in-game'},
   tutHelpOff:{ja:'チュートリアルOFF','ja-h':'チュートリアルOFF',en:'Tutorial OFF'},
-  tutSecret:{ja:'チームの相方にはないしょ！
-でも相手チームは見てもOK 😏',en:'Keep it secret from your partner!
-But the other team can peek 😏','ja-h':'チームのあいぼうにはないしょ！
-でもあいてチームはみてもOK 😏'},
+  tutSecret:{ja:'チームの相方にはないしょ！\nでも相手チームは見てもOK 😏',en:'Keep it secret from your partner!\nBut the other team can peek 😏','ja-h':'チームのあいぼうにはないしょ！\nでもあいてチームはみてもOK 😏'},
   tutRescue:{ja:'石が全滅！救済措置で\n1つだけ自由に置けるよ\n（角はできるだけダメ！）','ja-h':'いしがぜんめつ！すくいのてで\n1つだけじゆうにおけるよ\n（かどはできるだけダメ！）',en:'All stones gone! You get\none free placement\n(corners blocked if possible!)'},
 };
 function T(key,vars){const e=I18N[key]||{};let s=e[LANG]||(LANG==='ja-h'?e['ja']:null)||key;if(vars)for(const[k,v]of Object.entries(vars))s=s.replace(`{${k}}`,v);return s;}
