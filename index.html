@@ -1442,10 +1442,10 @@ class GameScreen{
       this.ren.splatBar(lox+numPad,barY,eW-numPad*2,barH,this.bd,false,this.tm.swap,null);
       // Row 3: ターンインジケーター
       const turnY=barY+barH+2;
-      if(isBlackTurn){ctx.fillStyle='#1a1a1a';ctx.fillRect(0,turnY,W,6);ctx.fillStyle=C.tA;ctx.fillRect(0,turnY-1,W,1.5);ctx.fillRect(0,turnY+6,W,1.5);}
-      else{ctx.fillStyle='#e8e7e0';ctx.fillRect(0,turnY,W,6);ctx.fillStyle=C.tB;ctx.fillRect(0,turnY-1,W,1.5);ctx.fillRect(0,turnY+6,W,1.5);}
+      ctx.fillStyle=isBlackTurn?'#1a1a1a':'#e8e7e0';ctx.fillRect(0,turnY,W,6);
+      ctx.fillStyle=isBlackTurn?C.tA:C.tB;ctx.fillRect(0,turnY+6,W,6);
       // Row 4-6: パネル上段 + 盤面 + パネル下段
-      topH=turnY+8;const panelRowH=fs*2.8;const bubbleRowH=fs*2;
+      topH=turnY+14;const panelRowH=fs*2.8;const bubbleRowH=fs*2;
       const boardTop=topH+bubbleRowH+panelRowH+fs*0.3;const boardBot=H-panelRowH-bubbleRowH-fs*1;this._bubbleTopY=topH;this._bubbleBotY=boardBot+panelRowH+fs*0.3;
       const bPx=Math.min(eW,boardBot-boardTop);
       this.cs=bPx/BS;this.ox=(W-bPx)/2;this.oy=boardTop;
@@ -1466,8 +1466,8 @@ class GameScreen{
       const spdTxt=this.tm.spd>=8?'⚡':`×${this.tm.spd}`;
       tt(ctx,spdTxt,spdX+spW/2,spdY+spH/2,`bold ${fs*0.5}px sans-serif`,isHov(spdX,spdY,spW,spH)?C.txt:C.gold);
       this.btns.push({id:'spd',x:spdX,y:spdY,w:spW,h:spH});
-      if(isBlackTurn){ctx.fillStyle='#1a1a1a';ctx.fillRect(0,topH-6,W,6);ctx.fillStyle=C.tA;ctx.fillRect(0,topH-7,W,1.5);ctx.fillRect(0,topH,W,1.5);}
-      else{ctx.fillStyle='#e8e7e0';ctx.fillRect(0,topH-6,W,6);ctx.fillStyle=C.tB;ctx.fillRect(0,topH-7,W,1.5);ctx.fillRect(0,topH,W,1.5);}
+      ctx.fillStyle=isBlackTurn?'#1a1a1a':'#e8e7e0';ctx.fillRect(0,topH-12,W,6);
+      ctx.fillStyle=isBlackTurn?C.tA:C.tB;ctx.fillRect(0,topH-6,W,6);
     }
 
     // === 4隅プレイヤーパネル ===
@@ -1697,10 +1697,12 @@ class GameScreen{
     if(!this.tut.show||!this.tut.msg)return;
     const t=this.tut;const now=performance.now();
     const elapsed=now-t.t;
-    const fadeIn=Math.min(1,elapsed/300);
+    // アイリスワイプ: 800ms easeOutCubic
+    const irisT=Math.min(1,elapsed/800);
+    const e=1-Math.pow(1-irisT,3);
 
-    // 濃い半透明オーバーレイ + スポットライト（clip方式）
-    ctx.save();ctx.globalAlpha=fadeIn*0.85;
+    // 濃い半透明オーバーレイ + スポットライト（アイリスワイプ）
+    ctx.save();ctx.globalAlpha=0.85*e;
     if(t.spots&&t.spots.length>0){
       // 隣接スポットをグループ化（枠の重なり防止）
       const pad=0;
@@ -1718,17 +1720,32 @@ class GameScreen{
             if(grid.has(nk)&&!visited.has(nk)){visited.add(nk);q.push([r+dr,c+dc]);}}}
         groups.push(group);
       }
-      // クリップ: 隣接セル間はpadなし（evenodd重なり防止）
+      // ターゲット全体のバウンディングボックス
+      const allCells=[...grid].map(k=>{const[r,c]=k.split(',').map(Number);return{r,c};});
+      const minR=Math.min(...allCells.map(c=>c.r)),maxR=Math.max(...allCells.map(c=>c.r));
+      const minC=Math.min(...allCells.map(c=>c.c)),maxC=Math.max(...allCells.map(c=>c.c));
+      const tgtX=this.ox+minC*cs2,tgtY=this.oy+minR*cs2;
+      const tgtW=(maxC-minC+1)*cs2,tgtH=(maxR-minR+1)*cs2;
+      // 盤面全体→ターゲットに収束
+      const boardX=this.ox,boardY=this.oy,boardW=BS*cs2,boardH=BS*cs2;
+      const mix=(a,b,t2)=>a+(b-a)*t2;
+      // アイリスワイプ: 穴の各セルを「盤面比率で拡大」→「ターゲットセル」に収束
       ctx.beginPath();ctx.rect(0,0,W,H);
       for(const key of grid){
         const[r,c]=key.split(',').map(Number);
         const pT=grid.has(`${r-1},${c}`)?0:pad, pB=grid.has(`${r+1},${c}`)?0:pad;
         const pL=grid.has(`${r},${c-1}`)?0:pad, pR=grid.has(`${r},${c+1}`)?0:pad;
-        ctx.rect(this.ox+c*cs2-pL, this.oy+r*cs2-pT, cs2+pL+pR, cs2+pT+pB);
+        // ターゲット位置
+        const fx=this.ox+c*cs2-pL, fy=this.oy+r*cs2-pT;
+        const fw=cs2+pL+pR, fh=cs2+pT+pB;
+        // 開始位置（盤面全体を穴にする）
+        const sx=fx-(boardW-fw)/2, sy=fy-(boardH-fh)/2;
+        const sw=fw+(boardW-fw), sh=fh+(boardH-fh);
+        ctx.rect(mix(sx,fx,e),mix(sy,fy,e),mix(sw,fw,e),mix(sh,fh,e));
       }
       ctx.fillStyle='rgba(0,0,0,1)';ctx.fill('evenodd');
-      // グロー枠（クリップ穴と同じ座標で外周辺のみ描画）
-      ctx.globalAlpha=fadeIn*(0.5+0.3*Math.sin(performance.now()/300));
+      // グロー枠
+      ctx.globalAlpha=e*(0.5+0.3*Math.sin(now/300));
       for(const g of groups){
         const gSet=new Set(g.map(([r,c])=>`${r},${c}`));
         ctx.beginPath();
@@ -1744,7 +1761,13 @@ class GameScreen{
         ctx.strokeStyle=C.gold;ctx.lineWidth=3;ctx.stroke();
       }
     }else{
-      ctx.fillStyle='rgba(0,0,0,1)';ctx.fillRect(0,0,W,H);
+      // スポットなし: 盤面中央からアイリスクローズ
+      const irisCY=this.oy+this.cs*BS/2;
+      const maxR2=Math.sqrt(W*W+H*H);
+      const r2=maxR2*(1-e);
+      ctx.beginPath();ctx.rect(0,0,W,H);
+      ctx.arc(cx,irisCY,Math.max(1,r2),0,Math.PI*2,true);
+      ctx.fillStyle='rgba(0,0,0,1)';ctx.fill('evenodd');
     }
     ctx.restore();
 
@@ -1752,7 +1775,6 @@ class GameScreen{
     const lines=T(t.msg).split('\n');
     const panH=fs*(1.2+lines.length*0.85);
     const panW=Math.min(W*0.75,fs*16);
-    // 位置: スポットがあればその下、なければ盤面中央
     let panY;
     if(t.spots&&t.spots.length>0){
       const maxY=Math.max(...t.spots.map(s=>s.y+s.r));
@@ -1761,15 +1783,16 @@ class GameScreen{
       panY=this.oy+this.cs*BS/2-panH/2;
     }
     const panX=cx-panW/2;
-    ctx.save();ctx.globalAlpha=fadeIn;
+    // テキストパネル: アイリス収束後にフェードイン
+    const textFade=elapsed>800?Math.min(1,(elapsed-800)/300):0;
+    ctx.save();ctx.globalAlpha=textFade;
     rr(ctx,panX,panY,panW,panH,12);
     ctx.fillStyle='rgba(0,0,0,0.85)';ctx.fill();
     for(let i=0;i<lines.length;i++){
       tt(ctx,lines[i],cx,panY+fs*0.8+i*fs*0.8,`bold ${fs*0.6}px sans-serif`,'#fff');
     }
-    // ▼点滅（タップで進む）
     const blink=Math.sin(now/300)>0?1:0.3;
-    ctx.globalAlpha=fadeIn*blink;
+    ctx.globalAlpha=textFade*blink;
     tt(ctx,'▼',cx,panY+panH-fs*0.3,`${fs*0.5}px sans-serif`,C.gold);
     ctx.restore();
   }
