@@ -1006,7 +1006,7 @@ class TM{
       }else if(this.vmS.some(([vr,vc])=>vr===r1&&vc===c1)){
         justPlace(r1,c1,0);
       }else{
-        this.anims.push({type:'miss',r:r1,c:c1,progress:0,startTime:now});
+        this.anims.push({type:'miss',r:r1,c:c1,color:col,progress:0,startTime:now});
       }
     }else{
       const[r2,c2]=this.p2;
@@ -1027,7 +1027,7 @@ class TM{
       }else if(this.vmS.some(([vr,vc])=>vr===r1&&vc===c1)){
         justPlace(r1,c1,0);delay=400;
       }else{
-        this.anims.push({type:'miss',r:r1,c:c1,progress:0,startTime:now});delay=400;
+        this.anims.push({type:'miss',r:r1,c:c1,color:col,progress:0,startTime:now});delay=400;
       }
       if(f2.length>0){
         if(this.bd.cells[r2][c2]===EMPTY)this.bd.place(r2,c2,col);
@@ -1037,7 +1037,7 @@ class TM{
       }else if(this.vmS.some(([vr,vc])=>vr===r2&&vc===c2)){
         justPlace(r2,c2,delay);
       }else{
-        this.anims.push({type:'miss',r:r2,c:c2,progress:0,startTime:now+delay});
+        this.anims.push({type:'miss',r:r2,c:c2,color:col,progress:0,startTime:now+delay});
       }
     }
     this.animT=now;this.rev=null;
@@ -1253,15 +1253,26 @@ class TitleScreen{
     if(!this._showTime)this._showTime=performance.now();
     if(!window._homeTutSeen&&this._teamBoxRect&&performance.now()-this._showTime>1000){
       const tb=this._teamBoxRect;const pad=8;
-      ctx.save();ctx.globalAlpha=0.82;
+      const tutElapsed=performance.now()-this._showTime-1000;
+      // イージング: 外から内へしゅーんと閉じる（800ms, easeOutCubic）
+      const t=Math.min(1,tutElapsed/800);
+      const e=1-Math.pow(1-t,3); // easeOutCubic
+      // 穴のサイズ: 画面全体 → スポットライト部分
+      const tgtX=tb.x-pad,tgtY=tb.y-pad,tgtW=tb.w+pad*2,tgtH=tb.h+pad*2;
+      const hx=tgtX*e+(0-W*0.3)*(1-e);      // 左端の外側からスタート
+      const hy=tgtY*e+(0-H*0.3)*(1-e);       // 上端の外側からスタート
+      const hw=tgtW*e+(W*1.6)*(1-e);          // 画面より大きい穴から縮小
+      const hh=tgtH*e+(H*1.6)*(1-e);
+      ctx.save();ctx.globalAlpha=0.82*e;
       ctx.beginPath();ctx.rect(0,0,W,H);
-      ctx.rect(tb.x-pad,tb.y-pad,tb.w+pad*2,tb.h+pad*2);
+      const hr=10*(1-e)+10;
+      ctx.moveTo(hx+hr,hy);ctx.lineTo(hx+hw-hr,hy);ctx.quadraticCurveTo(hx+hw,hy,hx+hw,hy+hr);ctx.lineTo(hx+hw,hy+hh-hr);ctx.quadraticCurveTo(hx+hw,hy+hh,hx+hw-hr,hy+hh);ctx.lineTo(hx+hr,hy+hh);ctx.quadraticCurveTo(hx,hy+hh,hx,hy+hh-hr);ctx.lineTo(hx,hy+hr);ctx.quadraticCurveTo(hx,hy,hx+hr,hy);ctx.closePath();
       ctx.fillStyle='rgba(0,0,0,1)';ctx.fill('evenodd');
-      ctx.globalAlpha=1;
-      // スポットライト枠
-      rr(ctx,tb.x-pad,tb.y-pad,tb.w+pad*2,tb.h+pad*2,10);
-      ctx.strokeStyle=C.gold;ctx.lineWidth=3;ctx.globalAlpha=0.5+0.3*Math.sin(performance.now()/300);ctx.stroke();
-      ctx.globalAlpha=1;
+      ctx.globalAlpha=e;
+      // スポットライト枠（収束後に光る）
+      rr(ctx,hx,hy,hw,hh,hr);
+      ctx.strokeStyle=C.gold;ctx.lineWidth=3;ctx.globalAlpha=e*(0.5+0.3*Math.sin(performance.now()/300));ctx.stroke();
+      ctx.globalAlpha=e;
       // テキストパネル
       const msg=T('tutHomeTeam',{act:_act(),Act:_Act()});
       const lines=msg.split('\n');
@@ -1603,11 +1614,36 @@ class GameScreen{
       ctx.shadowColor=glowCol;ctx.shadowBlur=20;
       tt(ctx,winIcons[0]||'',cx-fs*1.5,panY+fs*1.5,`${fs*1.8}px sans-serif`,C.txt);
       tt(ctx,winIcons[1]||'',cx+fs*1.5,panY+fs*1.5,`${fs*1.8}px sans-serif`,C.txt);
-      ctx.shadowBlur=0;
-      // テキスト（文字色はパネルに合わせてコントラスト確保）
+      // テキスト（石グラフィック + 反対色テキスト）— グロー継続
       const txtCol=wStone===BLACK?'#f0efe8':'#1a1a1a';
-      tt(ctx,winTxt,cx,panY+fs*3.3,`bold ${fs*1.2}px sans-serif`,txtCol);
-      tt(ctx,`${iA} ${tc.a} - ${tc.b} ${iB}`,cx,panY+fs*4.7,`bold ${fs*0.9}px sans-serif`,C.gold);
+      const wtY=panY+fs*3.3;
+      const winTxtClean=w?T('teamWin',{s:''}).replace(/^\s+/,''):T('draw');
+      ctx.font=`bold ${fs*1.2}px sans-serif`;const wtMet=ctx.measureText(winTxtClean);
+      const stoneR2=fs*0.55;
+      // 石を左に描画、テキストを右に（グロー付きのまま）
+      const totalW=stoneR2*2+fs*0.2+wtMet.width;
+      const startX=cx-totalW/2;
+      this.ren.stone(startX+stoneR2,wtY,stoneR2,wStone);
+      tt(ctx,winTxtClean,startX+stoneR2*2+fs*0.2+wtMet.width/2,wtY,`bold ${fs*1.2}px sans-serif`,txtCol);
+      ctx.shadowBlur=0;
+      // スコア行: 石グラ(赤グロー) 数字 - 数字 石グラ(青グロー)
+      const scY=panY+fs*4.7;
+      const scR=fs*0.4;
+      const scFont=`bold ${fs*0.9}px sans-serif`;
+      ctx.font=scFont;const dashMet=ctx.measureText(` ${tc.a} - ${tc.b} `);
+      const scTotalW=scR*2+dashMet.width+scR*2;
+      const scStartX=cx-scTotalW/2;
+      const colA2=this.tm.swap?WHITE:BLACK, colB2=this.tm.swap?BLACK:WHITE;
+      // 左の石（チームA）+ グロー
+      ctx.shadowColor=C.tA;ctx.shadowBlur=15;
+      this.ren.stone(scStartX+scR,scY,scR,colA2);
+      ctx.shadowBlur=0;
+      // 中央テキスト
+      tt(ctx,`${tc.a} - ${tc.b}`,cx,scY,scFont,C.gold);
+      // 右の石（チームB）+ グロー
+      ctx.shadowColor=C.tB;ctx.shadowBlur=15;
+      this.ren.stone(scStartX+scTotalW-scR,scY,scR,colB2);
+      ctx.shadowBlur=0;
       ctx.restore();
       const bw2=Math.min(eW*0.5,220),bh2=Math.max(fs*1.8,40);
       const btnY2=panY+panH+fs*0.8;
@@ -2098,16 +2134,19 @@ class ResultScreen{
     for(let i=0;i<hist.length;i++){const h2=hist[i];const wPct=h2.w/64;const px2=gx+i*step,py=gy+gh*wPct;i===0?ctx.moveTo(px2,py):ctx.lineTo(px2,py);}ctx.stroke();
     ctx.beginPath();ctx.strokeStyle='rgba(0,0,0,0.3)';ctx.lineWidth=1;
     for(let i=0;i<hist.length;i++){const h2=hist[i];const bPct=h2.b/64;const px2=gx+i*step,py=gy+gh*(1-bPct);i===0?ctx.moveTo(px2,py):ctx.lineTo(px2,py);}ctx.stroke();
-    // イベントマーカー
-    for(let i=0;i<hist.length;i++){const h2=hist[i],t=h2.b+h2.w,r=t?h2.b/t:0.5;const px2=gx+i*step,py=gy+gh*(1-r);
-      // チームAのイベント=上側、チームB=下側にオフセット
-      const above=h2.team==='A'?-1:1;
+    // イベントマーカー（白境界=上、黒境界=下に合わせて配置）
+    for(let i=0;i<hist.length;i++){const h2=hist[i];const px2=gx+i*step;
+      const pyW=gy+gh*(h2.w/64);      // 白エリア下端
+      const pyB=gy+gh*(1-h2.b/64);    // 黒エリア上端
+      const pyMid=(pyW+pyB)/2;        // 灰色ゾーン中央
+      // チームAマーカー=白エリア下端の少し上、チームBマーカー=黒エリア上端の少し下
+      const py=h2.team==='A'?pyW-fs*0.15:pyB+fs*0.15;
       const hasCorner=h2.ev?.includes('角'),hasDupe=h2.ev?.includes('かぶり');
       const both=hasCorner&&hasDupe;
-      if(hasCorner)tt(ctx,'★',px2+(both?-fs*0.15:0),py+above*fs*0.35,`bold ${fs*0.35}px sans-serif`,C.gold);
-      if(hasDupe)tt(ctx,'💥',px2+(both?fs*0.15:0),py+above*fs*0.35,`${fs*0.3}px sans-serif`,'#fff');}
-    // リプレイ位置インジケーター（黄色丸）
-    if(this.ri>=0&&this.ri<hist.length){const h2=hist[this.ri],t=h2.b+h2.w,r=t?h2.b/t:0.5;const px2=gx+this.ri*step,py=gy+gh*(1-r);
+      if(hasCorner)tt(ctx,'★',px2+(both?-fs*0.15:0),py,`bold ${fs*0.35}px sans-serif`,C.gold);
+      if(hasDupe)tt(ctx,'💥',px2+(both?fs*0.15:0),py,`${fs*0.3}px sans-serif`,'#fff');}
+    // リプレイ位置インジケーター（灰色ゾーン中央に配置）
+    if(this.ri>=0&&this.ri<hist.length){const h2=hist[this.ri];const px2=gx+this.ri*step;const py=gy+gh*((h2.w/64)+(1-h2.b/64))/2;
       ctx.beginPath();ctx.arc(px2,py,5,0,Math.PI*2);ctx.fillStyle=C.gold;ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();}
   }
 
