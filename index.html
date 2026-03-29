@@ -9,10 +9,32 @@
 *{margin:0;padding:0;box-sizing:border-box;}
 html,body{width:100%;height:100%;overflow:hidden;background:#1a5c32;touch-action:manipulation;user-select:none;-webkit-user-select:none;}
 canvas{display:block;width:100%;height:100%;}
+#fbOverlay{position:fixed;inset:0;background:rgba(0,0,0,0.75);display:none;align-items:center;justify-content:center;z-index:100;touch-action:manipulation;font-family:sans-serif;}
+#fbBox{background:#1e4a2e;border:2px solid #d4a843;border-radius:14px;padding:22px 18px;max-width:380px;width:92%;text-align:center;box-shadow:0 8px 32px rgba(0,0,0,0.5);}
+#fbBox h3{color:#d4a843;font-size:17px;margin-bottom:14px;}
+#fbBox textarea{width:100%;height:130px;background:#0e2a18;color:#f0efe8;border:1px solid #3a7a4a;border-radius:8px;padding:10px;font-size:15px;resize:none;font-family:sans-serif;line-height:1.5;}
+#fbBox textarea::placeholder{color:rgba(240,239,232,0.35);}
+#fbBox textarea:focus{outline:none;border-color:#d4a843;}
+.fb-btns{display:flex;gap:10px;margin-top:14px;justify-content:center;}
+.fb-btns button{padding:10px 24px;border:none;border-radius:8px;font-size:15px;cursor:pointer;font-weight:bold;transition:opacity 0.15s;}
+.fb-btns button:active{opacity:0.7;}
+#fbSend{background:#d4a843;color:#1a3a24;}
+#fbCancel{background:rgba(255,255,255,0.12);color:#ccc;}
+#fbThanks{color:#d4a843;font-size:18px;padding:30px 0;}
 </style>
 </head>
 <body>
 <canvas id="gameCanvas"></canvas>
+<div id="fbOverlay" onclick="if(event.target===this)closeFB()">
+  <div id="fbBox">
+    <h3 id="fbTitle">📝 Feedback</h3>
+    <textarea id="fbText"></textarea>
+    <div class="fb-btns">
+      <button id="fbSend" onclick="sendFB()">Send</button>
+      <button id="fbCancel" onclick="closeFB()">✗</button>
+    </div>
+  </div>
+</div>
 <script>
 // ═══════════════════════════════════════════════════════════════
 // Synchronized Reversi v1.0 — 2vs2 Party Reversi
@@ -89,6 +111,12 @@ const I18N={
   tutHelpOn:{ja:'チュートリアルON！\nゲーム中に説明がでるよ','ja-h':'チュートリアルON！\nゲームちゅうにせつめいがでるよ',en:'Tutorial ON!\nTips will appear in-game'},
   tutHelpOff:{ja:'チュートリアルOFF','ja-h':'チュートリアルOFF',en:'Tutorial OFF'},
   tutSecret:{ja:'チームの相方にはないしょ！\nでも相手チームは見てもOK 😏',en:'Keep it secret from your partner!\nBut the other team can peek 😏','ja-h':'チームのあいぼうにはないしょ！\nでもあいてチームはみてもOK 😏'},
+  // フィードバック
+  fbBtn:{ja:'📝 感想',en:'📝 Feedback','ja-h':'📝 かんそう'},
+  fbTitle:{ja:'📝 感想を聞かせてね',en:'📝 Send Feedback','ja-h':'📝 かんそうをきかせてね'},
+  fbPlaceholder:{ja:'面白かった！ここが好き！こうしてほしい…など',en:'Fun! I liked this! Suggestions...',  'ja-h':'おもしろかった！ここがすき！こうしてほしい…など'},
+  fbSend:{ja:'送る',en:'Send','ja-h':'おくる'},
+  fbThanks:{ja:'✨ ありがとう！',en:'✨ Thanks!','ja-h':'✨ ありがとう！'},
   tutRescue:{ja:'石が全滅！救済措置で\n1つだけ自由に置けるよ\n（角はできるだけダメ！）','ja-h':'いしがぜんめつ！すくいのてで\n1つだけじゆうにおけるよ\n（かどはできるだけダメ！）',en:'All stones gone! You get\none free placement\n(corners blocked if possible!)'},
   tutHomeTeam:{ja:'ここを{act}すると\nチーム編成を変えられるよ！','ja-h':'ここを{act}すると\nチームへんせいをかえられるよ！',en:'{Act} here to\nchange team setup!'},
 };
@@ -96,6 +124,50 @@ const _isTouch='ontouchstart' in window;
 function _act(){return _isTouch?(LANG==='ja'||LANG==='ja-h'?'タップ':'tap'):(LANG==='ja'||LANG==='ja-h'?'クリック':'click');}
 function _Act(){return _isTouch?(LANG==='ja'||LANG==='ja-h'?'タップ':'Tap'):(LANG==='ja'||LANG==='ja-h'?'クリック':'Click');}
 function T(key,vars){const e=I18N[key]||{};let s=e[LANG]||(LANG==='ja-h'?e['ja']:null)||key;if(vars)for(const[k,v]of Object.entries(vars))s=s.replace(`{${k}}`,v);return s;}
+
+// ═══════════════════════════════════════════════════════════════
+// Feedback — Google Forms 連携
+// ═══════════════════════════════════════════════════════════════
+const FB_FORM_URL='https://docs.google.com/forms/d/e/1FAIpQLSfHPqrcs0I0q3ZuVBRQiLRCuateXgsJD9k9g6aN50jKPydlsw/formResponse';
+const FB_ENTRY_RATING='entry.1634973842';
+const FB_ENTRY_TEXT='entry.1111202687';
+const FB_EMOJIS=['😐','🙂','😊','😄','🤩'];
+
+let _fbRating='';
+function openFB(){
+  _fbRating='';
+  const ol=document.getElementById('fbOverlay');
+  ol.style.display='flex';
+  _renderFBForm();
+}
+function _renderFBForm(){
+  const box=document.getElementById('fbBox');
+  const emojiBtns=FB_EMOJIS.map(e=>{
+    const sel=_fbRating===e;
+    return `<span onclick="_selectRating('${e}')" style="font-size:32px;cursor:pointer;padding:4px 6px;border-radius:8px;border:2px solid ${sel?'#d4a843':'transparent'};background:${sel?'rgba(212,168,67,0.2)':'transparent'};transition:all 0.15s;">${e}</span>`;
+  }).join('');
+  box.innerHTML=`<h3 id="fbTitle">${T('fbTitle')}</h3><div style="margin-bottom:14px;">${emojiBtns}</div><textarea id="fbText" placeholder="${T('fbPlaceholder')}">${box._savedText||''}</textarea><div class="fb-btns"><button id="fbSend" onclick="sendFB()">${T('fbSend')}</button><button id="fbCancel" onclick="closeFB()">✗</button></div>`;
+}
+function _selectRating(e){
+  const box=document.getElementById('fbBox');
+  const ta=document.getElementById('fbText');
+  box._savedText=ta?ta.value:'';
+  _fbRating=e;
+  _renderFBForm();
+}
+function closeFB(){document.getElementById('fbOverlay').style.display='none';}
+function sendFB(){
+  const txt=document.getElementById('fbText').value.trim();
+  if(!_fbRating&&!txt)return;
+  const params=[];
+  if(_fbRating)params.push(`${FB_ENTRY_RATING}=${encodeURIComponent(_fbRating)}`);
+  if(txt)params.push(`${FB_ENTRY_TEXT}=${encodeURIComponent(txt)}`);
+  fetch(FB_FORM_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'application/x-www-form-urlencoded'},
+    body:params.join('&')});
+  const box=document.getElementById('fbBox');
+  box.innerHTML=`<div id="fbThanks">${T('fbThanks')}</div>`;
+  setTimeout(closeFB,1500);
+}
 
 const EMPTY=0,BLACK=1,WHITE=2,BS=8;
 const DIRS=[[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
@@ -133,7 +205,7 @@ const C={bg:'#1a5c32',bgNeutral:'#2a2a2e',boardBg:'#2d8a4e',grid:'#1a5c32',
   tA:'#e05040',tABg:'rgba(224,80,64,0.15)',tB:'#4ea8c4',tBBg:'rgba(78,168,196,0.15)',
   txt:'#f0efe8',sub:'rgba(240,239,232,0.5)',ov:'rgba(10,30,15,0.92)',
   hi:'rgba(212,168,67,0.5)',sel:'rgba(224,80,64,0.55)',
-  barB:'#3a3a3a',barW:'#e8e7e0',pan:'rgba(0,0,0,0.25)'};
+  barB:'#222',barW:'#fff',pan:'rgba(0,0,0,0.25)'};
 
 const CPUW=[[100,-20,10,5,5,10,-20,100],[-20,-40,-5,-5,-5,-5,-40,-20],[10,-5,4,2,2,4,-5,10],[5,-5,2,0,0,2,-5,5],[5,-5,2,0,0,2,-5,5],[10,-5,4,2,2,4,-5,10],[-20,-40,-5,-5,-5,-5,-40,-20],[100,-20,10,5,5,10,-20,100]];
 const CPERS=[{c:1.5,f:2,r:3},{c:0.8,f:5,r:8},{c:2,f:1,r:2},{c:0.5,f:3,r:14}];
@@ -342,7 +414,6 @@ function eiFly(t){return t*t*(3-2*t);} // smoothstep: ゆっくり→加速→�
 // 戦況に応じた背景色を計算。ratio: 0=均衡, 正=黒優勢, 負=白優勢
 // 背景色フェード用の現在値
 const _bgCur=[42,42,46];
-let _bgLogTimer=0;
 function battleBg(bd,swap=false,final=false){
   if(!bd){_lerpBg(C.bgN);return _bgRgb();}
   const cn=bd.cnt();
@@ -359,9 +430,6 @@ function battleBg(bd,swap=false,final=false){
   const goal=[mix(C.bgN[0],tgt[0],strength),mix(C.bgN[1],tgt[1],strength),mix(C.bgN[2],tgt[2],strength)];
   // 最終結果はlerp速めに
   final?_lerpBg(goal,0.12):_lerpBg(goal);
-  const now=performance.now();
-  if(now-_bgLogTimer>1000){_bgLogTimer=now;
-    console.log(`[BG] ●${cn.b} ◻${cn.e} ○${cn.w} | A:${aScore} B:${bScore} diff:${diff} str:${strength.toFixed(2)}${final?' FINAL':''} | bg:rgb(${Math.round(_bgCur[0])},${Math.round(_bgCur[1])},${Math.round(_bgCur[2])})`);}
   return _bgRgb();
 }
 function _lerpBg(goal,sp=0.15){for(let i=0;i<3;i++)_bgCur[i]+=(goal[i]-_bgCur[i])*sp;}
@@ -587,12 +655,20 @@ class R{
       dleft=this._splatDisp.rb;dright=this._splatDisp.rw;
     }
 
-    rr(ctx,x,y,w,h,h/2);ctx.fillStyle='#5a5a5a';ctx.fill();
-    ctx.save();rr(ctx,x,y,w,h,h/2);ctx.clip();
     if(final){
+      // final: clipなし、直接描画で色が混ざらないようにする
+      const r2=h/2;
+      // 灰色の全体背景（角丸）
+      rr(ctx,x,y,w,h,r2);ctx.fillStyle='#888';ctx.fill();
+      // 左チーム色（角丸クリップ内）
+      ctx.save();rr(ctx,x,y,w,h,r2);ctx.clip();
       ctx.fillStyle=leftCol;ctx.fillRect(x,y,w*dleft,h);
+      // 右チーム色
       ctx.fillStyle=rightCol;ctx.fillRect(x+w*(1-dright),y,w*dright,h);
+      ctx.restore();
     }else{
+    rr(ctx,x,y,w,h,h/2);ctx.fillStyle='#888';ctx.fill();
+    ctx.save();rr(ctx,x,y,w,h,h/2);ctx.clip();
       // 5色スプラバー: 確定(パキッと)→暫定(波)→灰→暫定(波)→確定(パキッと)
       const now2=performance.now()*0.001;
       const amp=Math.min(1,cnt.e/10);
@@ -608,7 +684,7 @@ class R{
       if(tentL>0.01){const mx=x+w*dleft;const bx=x+w*lkL;
         ctx.beginPath();ctx.moveTo(bx,y);
         for(let i=0;i<=h;i++)ctx.lineTo(mx+waveL(i),y+i);
-        ctx.lineTo(bx,y+h);ctx.closePath();ctx.fillStyle=leftCol;ctx.globalAlpha=0.7;ctx.fill();ctx.globalAlpha=1;}
+        ctx.lineTo(bx,y+h);ctx.closePath();ctx.fillStyle=leftCol;ctx.fill();}
       // 確定部分（右）: パキッとした色、波なし
       const lkR=lockedRPct;
       if(lkR>0.005){ctx.fillStyle=rightCol;ctx.fillRect(x+w*(1-lkR),y,w*lkR,h);
@@ -618,7 +694,7 @@ class R{
       if(tentR>0.01){const mx=x+w*(1-dright);const bx=x+w*(1-lkR);
         ctx.beginPath();ctx.moveTo(bx,y);
         for(let i=0;i<=h;i++)ctx.lineTo(mx+waveR(i),y+i);
-        ctx.lineTo(bx,y+h);ctx.closePath();ctx.fillStyle=rightCol;ctx.globalAlpha=0.7;ctx.fill();ctx.globalAlpha=1;}
+        ctx.lineTo(bx,y+h);ctx.closePath();ctx.fillStyle=rightCol;ctx.fill();}
     }
     ctx.restore();
     if(!final){rr(ctx,x,y,w,h,h/2);ctx.strokeStyle='rgba(255,255,255,0.2)';ctx.lineWidth=1;ctx.stroke();}
@@ -1988,6 +2064,12 @@ class ResultScreen{
     const homeBg=light?'rgba(0,0,0,0.1)':'rgba(255,255,255,0.15)';
     const homeTxt=light?'#333':'#eee';
     drawBtn(ctx,T('home'),cx+gap2/2,y,bw2,bh2,homeBg,homeTxt);this.btns.push({id:'home',x:cx+gap2/2,y,w:bw2,h:bh2});
+    // フィードバックボタン
+    y+=bh2+fs*0.5;
+    const fbW=Math.min(eW*0.5,200),fbH=Math.max(fs*1.3,32);
+    const fbBg=light?'rgba(0,0,0,0.06)':'rgba(255,255,255,0.08)';
+    const fbTxt=light?'rgba(0,0,0,0.5)':'rgba(240,239,232,0.5)';
+    drawBtn(ctx,T('fbBtn'),cx-fbW/2,y,fbW,fbH,fbBg,fbTxt);this.btns.push({id:'fb',x:cx-fbW/2,y,w:fbW,h:fbH});
   }
 
   _graph(ctx,x,y,w,h,fs,light=false,fgSub='rgba(240,239,232,0.5)'){
@@ -2038,7 +2120,7 @@ class ResultScreen{
       const r=(tx-this.ga.x)/this.ga.w;this.ri=Math.max(0,Math.min(this.hist.length-1,Math.round(r*(this.hist.length-1))));return;}
     for(const b of this.btns){if(!hit(tx,ty,b.x,b.y,b.w,b.h))continue;
       if(b.id==='retry'){this.app.restart();return;}if(b.id==='home'){this.app.showTitle();return;}
-      if(b.id==='play'){this._togglePlay();return;}return;}
+      if(b.id==='play'){this._togglePlay();return;}if(b.id==='fb'){openFB();return;}return;}
   }
   handleMove(tx,ty){
     if(this.sa&&this.bds.length>1&&this.dragging){
